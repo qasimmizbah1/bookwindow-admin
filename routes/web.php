@@ -28,6 +28,8 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/orders/{order}/pdf', [OrderPdfController::class, 'download'])
     ->name('orders.pdf');
+Route::get('/orders/{order}/print', [OrderPdfController::class, 'print'])
+    ->name('orders.print');
 
  // Route::get('/api/categories', [CategoryController::class, 'index']);
  // Route::get('/api/products', [ProductController::class, 'index']);

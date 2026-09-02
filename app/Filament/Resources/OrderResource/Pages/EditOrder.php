@@ -15,11 +15,16 @@ class EditOrder extends EditRecord
         return [
             Actions\DeleteAction::make(),
             Actions\Action::make('downloadPdf')
-                ->label('Invoice')
+                ->label('Download PDF')
                 ->icon('heroicon-o-document-arrow-down')
                 ->color('success')
                 ->url(fn () => route('orders.pdf', $this->record->id))
                 ->openUrlInNewTab(),
+            Actions\Action::make('printInvoice')
+                ->label('Print Invoice')
+                ->icon('heroicon-o-printer')
+                ->color('primary')
+                ->url(fn () => "javascript:window.open('" . route('orders.print', $this->record->id) . "', 'Print', 'width=800,height=600'); void(0);"),
         ];
     }
 }

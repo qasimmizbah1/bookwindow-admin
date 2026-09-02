@@ -2,69 +2,112 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Invoice</title>
+<title>Invoice - {{ $order->order_number }}</title>
 
 <style>
-body{
-    font-family: DejaVu Sans;
-    font-size:12px;
-    color:#333;
+body {
+    font-family: DejaVu Sans, sans-serif;
+    font-size: 13px;
+    color: #333;
+    line-height: 1.4;
 }
 
-.header{
-    border-bottom:2px solid #0f172a;
-    padding-bottom:15px;
-    margin-bottom:20px;
+.header {
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
 }
 
-.logo{
-    width:140px;
+.logo {
+    max-width: 250px;
+    height: auto;
 }
 
-.company{
-    text-align:right;
+.details-section {
+    width: 100%;
+    margin-bottom: 20px;
 }
 
-.section{
-    margin-top:20px;
+.details-section td {
+    vertical-align: top;
+    padding: 0;
+    border: none;
 }
 
-table{
-    width:100%;
-    border-collapse:collapse;
+.deliver-to {
+    width: 50%;
+    padding-right: 20px;
 }
 
-th{
-    background:#0f172a;
-    color:#fff;
-    padding:10px;
+.shipping-from {
+    width: 50%;
+    padding-left: 20px;
 }
 
-td{
-    border:1px solid #ddd;
-    padding:8px;
+h4 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: normal;
+    color: #555;
 }
 
-.total-table{
-    width:40%;
-    float:right;
-    margin-top:20px;
+table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.total-table td{
-    border:none;
+.items-table {
+    margin-top: 20px;
 }
 
-.grand{
-    font-size:16px;
-    font-weight:bold;
-    border-top:2px solid #000;
+.items-table th {
+    background: #f8f9fa;
+    color: #333;
+    font-weight: bold;
+    text-align: center;
+    border: 1px solid #ddd;
+    padding: 10px;
 }
 
-.footer{
-    margin-top:80px;
-    text-align:center;
-    color:#666;
+.items-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.items-table .product-col {
+    text-align: left;
+}
+
+.totals-table {
+    width: 40%;
+    float: right;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+
+.totals-table td {
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+}
+
+.totals-table .label {
+    text-align: right;
+    font-weight: bold;
+    background: #f8f9fa;
+    width: 60%;
+}
+
+.totals-table .value {
+    text-align: right;
+}
+
+.order-info {
+    margin-bottom: 20px;
+}
+
+.bold {
+    font-weight: bold;
 }
 </style>
 </head>
@@ -72,185 +115,116 @@ td{
 <body>
 
 <div class="header">
-
-<table>
-<tr>
-<td width="50%">
-<img src="{{ storage_path('app/public/logo.png') }}" class="logo">
-</td>
-
-<td width="50%" class="company">
-<h2>INVOICE</h2>
-
-<strong>Order #</strong>
-{{ $order->order_number }}
-
-<br>
-
-<strong>Date:</strong>
-{{ $order->created_at->format('d M Y') }}
-<br>
-<strong>Payment Method:</strong>
-{{ Str::upper($order->payment_method) }}
-
-</td>
-</tr>
-</table>
-
+    <img src="{{ storage_path('app/public/logo.png') }}" class="logo" alt="BookWindow">
 </div>
 
-<div class="section">
-
-<table>
-<tr>
-
-<td width="50%">
-
-<h3>Customer Details</h3>
-
-<strong>
-{{ $order->first_name }}
-{{ $order->last_name }}
-</strong>
-
-<br>
-
-{{ $order->email }}
-
-<br>
-
-{{ $order->customer_phone }}
-
-</td>
-
-<td width="50%">
-
-<h3>Shipping Address</h3>
-
-{{ $order->address }}
-
-<br>
-
-{{ $order->city }}
-
-<br>
-
-{{ $order->state }}
-
-<br>
-
-{{ $order->country }}
-
-<br>
-
-{{ $order->zip_code }}
-
-</td>
-
-</tr>
+<table class="details-section">
+    <tr>
+        <td class="deliver-to">
+            <h4>Deliver to,</h4>
+            <p style="margin:0;">
+                <span class="bold">Name:</span> {{ $order->first_name }} {{ $order->last_name }}<br>
+                <span class="bold">Address:</span> {{ $order->address }}<br>
+                <span class="bold">City:</span> {{ $order->city }}<br>
+                <span class="bold">State:</span> {{ $order->state }}<br>
+                <span class="bold">Pin Code:</span> {{ $order->zip_code }}<br>
+                <span class="bold">Phone:</span> {{ $order->customer_phone }}<br>
+                <span class="bold">Email:</span> {{ $order->email }}
+            </p>
+        </td>
+        
+        <td class="shipping-from">
+            <h4>Shipping From,</h4>
+            <p style="margin:0;">
+                <span class="bold">BOOKWINDOW</span><br>
+                <span class="bold">Store:</span> Shop No. 8, Maharani Garden road near by Hotel<br>
+                Dwarika Palace, Mangyawas, Jaipur, 302020, Rajasthan<br>
+                <span class="bold">Code:</span> 302020<br>
+                <span class="bold">Phone No:</span> +91 9468 888227<br>
+                <span class="bold">E-mail ID:</span> info@bookwindow.in<br>
+                <span class="bold">Website:</span> www.bookwindow.in
+            </p>
+        </td>
+    </tr>
 </table>
 
+<div class="order-info">
+    <p style="margin:0;">
+        Order Details,<br><br>
+        <span class="bold">Invoice Date:</span> {{ now()->format('d-m-Y') }}<br>
+        <span class="bold">Order ID:</span> {{ $order->order_number }}<br>
+        <span class="bold">Payment Method:</span> ₹ / {{ Str::upper($order->payment_method) }}
+    </p>
 </div>
 
-<div class="section">
-
-<h3>Order Items</h3>
-
-<table>
-
-<thead>
-<tr>
-<th>Product</th>
-<th width="60">Qty</th>
-<th width="100">Price</th>
-<th width="120">Subtotal</th>
-</tr>
-</thead>
-
-<tbody>
-
-@foreach($order->items as $item)
-
-<tr>
-
-<td>
-{{ $item->product?->name }}
-</td>
-
-<td align="center">
-{{ $item->quantity }}
-</td>
-
-<td align="right">
-₹{{ number_format($item->price,2) }}
-</td>
-
-<td align="right">
-₹{{ number_format($item->quantity * $item->price,2) }}
-</td>
-
-</tr>
-
-@endforeach
-
-</tbody>
-
+<table class="items-table">
+    <thead>
+        <tr>
+            <th width="5%">#</th>
+            <th width="45%">Product</th>
+            <th width="15%">Model</th>
+            <th width="10%">Quantity</th>
+            <th width="12%">Unit Price</th>
+            <th width="13%">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($order->items as $index => $item)
+        <tr>
+            <td align="center">{{ $index + 1 }}</td>
+            <td class="product-col">{{ $item->product?->name }}</td>
+            <td align="center">{{ $item->product?->model ?? '-' }}</td>
+            <td align="center" class="bold">{{ $item->quantity }}</td>
+            <td align="center">₹{{ number_format($item->price, 2) }}</td>
+            <td align="center" class="bold">₹{{ number_format($item->quantity * $item->price, 2) }}</td>
+        </tr>
+        @endforeach
+    </tbody>
 </table>
 
-<table class="total-table">
-
-<tr>
-<td>Subtotal</td>
-<td align="right">
-₹{{ number_format($order->subtotal,2) }}
-</td>
-</tr>
-
-<tr>
-<td>Discount</td>
-<td align="right">
--₹{{ number_format($order->discount_amount,2) }}
-</td>
-</tr>
-
-<tr>
-<td>Tax</td>
-<td align="right">
-₹{{ number_format($order->tax_amount,2) }}
-</td>
-</tr>
-
-<tr>
-<td>Shipping</td>
-<td align="right">
-₹{{ number_format($order->shipping_amount,2) }}
-</td>
-</tr>
-
-<tr class="grand">
-<td>Grand Total</td>
-<td align="right">
-₹{{ number_format($order->total_amount,2) }}
-</td>
-</tr>
-
+<table class="totals-table">
+    <tr>
+        <td class="label">Sub Total:</td>
+        <td class="value">₹{{ number_format($order->subtotal, 2) }}</td>
+    </tr>
+    @if($order->discount_amount > 0)
+    <tr>
+        <td class="label">Discount:</td>
+        <td class="value">-₹{{ number_format($order->discount_amount, 2) }}</td>
+    </tr>
+    @endif
+    @if($order->tax_amount > 0)
+    <tr>
+        <td class="label">Tax:</td>
+        <td class="value">₹{{ number_format($order->tax_amount, 2) }}</td>
+    </tr>
+    @endif
+    <tr>
+        <td class="label">Shipping Cost (Weight):</td>
+        <td class="value">₹{{ number_format($order->shipping_amount, 2) }}</td>
+    </tr>
+    @if(strtolower($order->payment_method) == 'cod' || strtolower($order->payment_method) == 'cash on delivery')
+    <tr>
+        <td class="label">Cash On Delivery:</td>
+        <td class="value">₹0.00</td>
+    </tr>
+    @endif
+    <tr>
+        <td class="label">Total</td>
+        <td class="value bold">₹{{ number_format($order->total_amount, 2) }}</td>
+    </tr>
 </table>
-
-</div>
 
 <div style="clear:both"></div>
 
-<div class="footer">
-
-<p>
-Thank you for shopping with BookWindow
-</p>
-
-<p>
-www.bookwindow.in
-</p>
-
-</div>
+@if(isset($is_print) && $is_print)
+<script>
+    window.onload = function() {
+        window.print();
+        setTimeout(function() { window.close(); }, 500);
+    }
+</script>
+@endif
 
 </body>
 </html>

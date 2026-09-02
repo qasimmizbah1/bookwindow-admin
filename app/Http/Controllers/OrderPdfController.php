@@ -19,4 +19,14 @@ class OrderPdfController extends Controller
             'order-' . $order->order_number . '.pdf'
         );
     }
+    
+    public function print(Order $order)
+    {
+        $order->load('items.product');
+
+        return view('pdf.order', [
+            'order' => $order,
+            'is_print' => true
+        ]);
+    }
 }
