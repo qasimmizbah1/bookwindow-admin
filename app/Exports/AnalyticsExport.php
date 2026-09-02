@@ -29,12 +29,12 @@ class BestSellingProductsSheet implements FromCollection, WithHeadings
 {
     public function collection()
     {
-        return OrderItem::select('product_id')
+        return OrderItem::select('order_items.product_id')
             ->selectRaw('products.name as product_name')
-            ->selectRaw('SUM(quantity) as total_quantity')
-            ->selectRaw('SUM(quantity * price) as total_revenue')
+            ->selectRaw('SUM(order_items.quantity) as total_quantity')
+            ->selectRaw('SUM(order_items.quantity * order_items.price) as total_revenue')
             ->join('products', 'products.id', '=', 'order_items.product_id')
-            ->groupBy('product_id', 'product_name')
+            ->groupBy('order_items.product_id', 'products.name')
             ->orderByDesc('total_quantity')
             ->limit(10)
             ->get();
