@@ -428,14 +428,14 @@ class OrderResource extends Resource
                         'heroicon-o-x-mark' => 'cancelled',
                     ]),
                 
-                // Tables\Columns\TextColumn::make('payment_method')
-                //     ->label('Payment')
-                //     ->badge()
-                //     ->colors([
-                //         'success' => 'cod',
-                //         'primary' => 'card',
-                //         'warning' => 'razorpay',
-                //     ]),
+                Tables\Columns\TextColumn::make('payment_method')
+                    ->label('Payment')
+                    ->badge()
+                    ->colors([
+                        'success' => 'cod',
+                        'primary' => 'card',
+                        'warning' => 'razorpay',
+                    ]),
                 
                 // Tables\Columns\TextColumn::make('payment_status')
                 //     ->label('Payment Status')
@@ -621,7 +621,18 @@ class OrderResource extends Resource
     {
         return [
             'index' => Pages\ListOrders::route('/'),
+            'create' => Pages\CreateOrder::route('/create'),
             'edit' => Pages\EditOrder::route('/{record}/edit'),
         ];
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
     }
 }
