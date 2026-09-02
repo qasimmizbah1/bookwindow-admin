@@ -20,7 +20,7 @@ body {
 }
 
 .logo {
-    max-width: 250px;
+    max-width: 100px;
     height: auto;
 }
 
