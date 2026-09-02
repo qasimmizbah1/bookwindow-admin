@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
-use App\Filament\Widgets\SalesByPaymentMethodChart;
+use App\Filament\Resources\SalesOrdersResource\Widgets\SalesByPaymentMethodChart;
 use Illuminate\Support\Facades\Session;
 
 class SalesOrdersResource extends Resource

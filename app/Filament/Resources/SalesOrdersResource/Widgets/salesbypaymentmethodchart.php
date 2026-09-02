@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Filament\Resources\SalesOrdersResource\Widgets;
 
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
@@ -16,19 +16,15 @@ class SalesByPaymentMethodChart extends ChartWidget
 
     protected int | string | array $columnSpan = 'full';
 
-
     public ?string $filter = 'all';
 
     public function mount(): void
     {
         $this->filter = Session::get('payment_method_filter', 'all');
     }
-    
 
     protected function getData(): array
     {
-
-        
         $activeFilter = $this->filter ?? 'all';
         
         if ($activeFilter === 'all') {
@@ -109,8 +105,6 @@ class SalesByPaymentMethodChart extends ChartWidget
         ];
     }
 
-    
-
     public function updatedFilter(): void
     {
         // Store the filter value in session when it changes
@@ -120,13 +114,12 @@ class SalesByPaymentMethodChart extends ChartWidget
         $this->redirect(request()->header('Referer'));
     }
 
-      protected function getOptions(): array
+    protected function getOptions(): array
     {
         return [
             'animation' => [
-                'duration' => 1500, // Animation duration in milliseconds
-                'easing' => 'easeOutQuart', // Animation easing function
-
+                'duration' => 1500,
+                'easing' => 'easeOutQuart',
             ],
             'responsive' => true,
             'interaction' => [
@@ -149,5 +142,4 @@ class SalesByPaymentMethodChart extends ChartWidget
             ],
         ];
     }
-    
 }

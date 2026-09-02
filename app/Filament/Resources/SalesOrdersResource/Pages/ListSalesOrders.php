@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\SalesOrdersResource\Pages;
 
 use App\Filament\Resources\SalesOrdersResource;
-use App\Filament\Widgets\SalesByPaymentMethodChart;
+use App\Filament\Resources\SalesOrdersResource\Widgets\SalesByPaymentMethodChart;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 

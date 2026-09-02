@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\AnalyticsResource\Widgets;
+namespace App\Filament\Widgets;
 
 use App\Models\OrderItem;
 use Flowframe\Trend\Trend;
