@@ -144,7 +144,7 @@ class SalesForecastResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSalesForecast::route('/'),
+            'index' => Pages\ListSalesForecasts::route('/'),
         ];
     }
     public static function getWidgets(): array

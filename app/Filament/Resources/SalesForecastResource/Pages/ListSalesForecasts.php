@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 
-class ListSalesForecast extends ListRecords
+class ListSalesForecasts extends ListRecords
 {
     protected static string $resource = SalesForecastResource::class;
 
