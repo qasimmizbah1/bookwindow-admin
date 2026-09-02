@@ -115,7 +115,18 @@ table {
 <body>
 
 <div class="header">
-    <img src="{{ storage_path('app/public/logo.png') }}" class="logo" alt="BookWindow">
+    @php
+        $logoPath = storage_path('app/public/logo.png');
+        $logoBase64 = '';
+        if(file_exists($logoPath)) {
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        }
+    @endphp
+    @if($logoBase64)
+        <img src="{{ $logoBase64 }}" class="logo" alt="BookWindow">
+    @else
+        <h2>BookWindow</h2>
+    @endif
 </div>
 
 <table class="details-section">
