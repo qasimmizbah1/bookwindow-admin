@@ -59,13 +59,19 @@ class VendorLatestOrders extends BaseWidget
                     }),
 
                 Tables\Columns\TextColumn::make('vendor_amount')
-                    ->label('Your Earnings')
+                    ->label('Net Earnings')
                     ->getStateUsing(function ($record) use ($vendor) {
                         if (!$vendor) return '₹0.00';
-                        $sum = $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
+                        $commissionRate = $vendor->commission_rate;
+                        $grossSum = $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
                             return ($item->quantity ?? 1) * ($item->price ?? 0);
                         });
-                        return '₹' . number_format($sum, 2);
+                        $netSum = $grossSum * (1 - ($commissionRate / 100));
+                        return '₹' . number_format($netSum, 2);
+                    })
+                    ->description(function ($record) use ($vendor) {
+                        if (!$vendor) return '';
+                        return "after {$vendor->commission_rate}% fee";
                     })
                     ->badge()
                     ->color('success'),

@@ -13,13 +13,20 @@ class CreateUser extends CreateRecord
 
     protected function afterCreate(): void
     {
-        
         // Only create vendor if role is vendor
-        if ($this->data['role'] === 'vendor') {
-            Vendor::create([
-                'user_id' => $this->record->id,
-                'vendor_name' => $this->data['vendor_name'],
-            ]);
+        if (($this->data['role'] ?? '') === 'vendor') {
+            $vendorData = $this->data['vendor'] ?? [];
+            $vendorData['user_id'] = $this->record->id;
+
+            if (!isset($vendorData['commission_percentage']) || $vendorData['commission_percentage'] === '') {
+                $vendorData['commission_percentage'] = 7.00;
+            }
+
+            if (!isset($vendorData['approval_status']) || empty($vendorData['approval_status'])) {
+                $vendorData['approval_status'] = 'approved';
+            }
+
+            Vendor::create($vendorData);
         }
     }
 }

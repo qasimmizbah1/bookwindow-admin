@@ -20,22 +20,32 @@ class EditUser extends EditRecord
 
     /**
      * 🔥 Form load karte waqt vendor data fill karein
-     * FORM FIELD: vendor.vendor_name → $data['vendor']['vendor_name']
      */
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        // Agar vendor exist karta hai toh saari fields fill karein
         if ($this->record->vendor) {
             $vendor = $this->record->vendor;
             
-            // 🔥 IMPORTANT: 'vendor' array mein saari fields daalein
             $data['vendor'] = [
                 'vendor_name' => $vendor->vendor_name,
+                'contact_person' => $vendor->contact_person,
                 'vendor_logo' => $vendor->vendor_logo,
                 'isbn_number' => $vendor->isbn_number,
+                'pan_number' => $vendor->pan_number,
+                'gst_number' => $vendor->gst_number,
                 'vendor_phone' => $vendor->vendor_phone,
                 'vendor_address' => $vendor->vendor_address,
+                'city' => $vendor->city,
+                'state' => $vendor->state,
+                'pincode' => $vendor->pincode,
                 'vendor_website' => $vendor->vendor_website,
+                'bank_name' => $vendor->bank_name,
+                'account_holder_name' => $vendor->account_holder_name,
+                'account_number' => $vendor->account_number,
+                'ifsc_code' => $vendor->ifsc_code,
+                'upi_id' => $vendor->upi_id,
+                'commission_percentage' => $vendor->commission_percentage ?? 7.00,
+                'approval_status' => $vendor->approval_status ?? 'approved',
             ];
         }
 
@@ -47,14 +57,14 @@ class EditUser extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // Agar role vendor hai toh vendor data save karein
         if (isset($data['role']) && $data['role'] === 'vendor') {
-            
-            // Agar vendor data form mein 'vendor' array mein hai
             if (isset($data['vendor'])) {
                 $vendorData = $data['vendor'];
                 
-                // Agar vendor exist karta hai toh update karein
+                if (!isset($vendorData['commission_percentage']) || $vendorData['commission_percentage'] === '') {
+                    $vendorData['commission_percentage'] = 7.00;
+                }
+
                 if ($this->record->vendor) {
                     $this->record->vendor->update($vendorData);
                 } else {
@@ -63,7 +73,6 @@ class EditUser extends EditRecord
                 }
             }
             
-            // 🔥 Vendor data ko main data se hatao (user table mein save na ho)
             unset($data['vendor']);
         }
         

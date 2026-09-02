@@ -33,6 +33,8 @@ class VendorStatsOverview extends BaseWidget
             ];
         }
 
+        $commissionRate = $vendor->commission_rate; // default 7.00% or dynamic
+
         $totalProducts = Product::where('vendor_id', $vendor->id)->count();
         $activeProducts = Product::where('vendor_id', $vendor->id)->where('is_visible', 1)->count();
         $pendingProducts = $totalProducts - $activeProducts;
@@ -45,12 +47,15 @@ class VendorStatsOverview extends BaseWidget
             $q->where('vendor_id', $vendor->id);
         })->whereIn('status', ['new', 'pending', 'processing'])->count();
 
-        $last30DaysEarnings = OrderItem::where('vendor_id', $vendor->id)
+        $last30DaysGross = OrderItem::where('vendor_id', $vendor->id)
             ->where('created_at', '>=', Carbon::now()->subDays(30))
             ->sum(DB::raw('quantity * price'));
+        $last30DaysNet = $last30DaysGross * (1 - ($commissionRate / 100));
 
-        $totalEarnings = OrderItem::where('vendor_id', $vendor->id)
+        $totalGross = OrderItem::where('vendor_id', $vendor->id)
             ->sum(DB::raw('quantity * price'));
+        $totalNet = $totalGross * (1 - ($commissionRate / 100));
+        $totalPlatformFee = $totalGross * ($commissionRate / 100);
 
         return [
             Stat::make('My Products', $totalProducts)
@@ -70,15 +75,20 @@ class VendorStatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-clock')
                 ->color($pendingFulfillment > 0 ? 'danger' : 'success'),
 
-            Stat::make('30 Days Earnings', '₹' . number_format($last30DaysEarnings, 2))
-                ->description('Revenue from last 30 days')
+            Stat::make('30 Days Net Earnings', '₹' . number_format($last30DaysNet, 2))
+                ->description("Gross: ₹" . number_format($last30DaysGross, 2) . " (-{$commissionRate}% Fee)")
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success'),
 
-            Stat::make('Total Lifetime Earnings', '₹' . number_format($totalEarnings, 2))
-                ->description('Total gross sales across all orders')
+            Stat::make('Total Lifetime Net Payout', '₹' . number_format($totalNet, 2))
+                ->description("Gross: ₹" . number_format($totalGross, 2) . " | Fee: ₹" . number_format($totalPlatformFee, 2))
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('primary'),
+
+            Stat::make('Platform Fee Rate', "{$commissionRate}%")
+                ->description('Dynamic commission deducted per sale')
+                ->descriptionIcon('heroicon-m-receipt-percent')
+                ->color('amber'),
         ];
     }
 }

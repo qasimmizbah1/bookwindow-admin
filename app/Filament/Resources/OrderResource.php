@@ -368,15 +368,27 @@ class OrderResource extends Resource
                                                 });
                                                 
                                                 if ($isVendor) {
+                                                    $commissionRate = $vendor->commission_rate;
+                                                    $commissionAmount = $totalAmount * ($commissionRate / 100);
+                                                    $netEarnings = $totalAmount - $commissionAmount;
+
                                                     $html .= '<div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
                                                         <div class="max-w-md ml-auto">
                                                             <div class="flex justify-between py-2 border-b border-gray-200">
                                                                 <span class="text-sm font-medium text-gray-600">Your Items Total:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . $totalItems . '</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . $totalItems . ' item(s)</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                                <span class="text-sm font-medium text-gray-600">Gross Sales Amount:</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($totalAmount, 2) . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200 text-amber-700">
+                                                                <span class="text-sm font-medium">Platform Fee (' . $commissionRate . '%):</span>
+                                                                <span class="text-sm font-semibold">-' . format_currency($commissionAmount, 2) . '</span>
                                                             </div>
                                                             <div class="flex justify-between pt-3 mt-1">
-                                                                <span class="text-base font-bold text-gray-700">Your Earnings:</span>
-                                                                <span class="text-xl font-bold text-emerald-600">' . format_currency($totalAmount, 2) . '</span>
+                                                                <span class="text-base font-bold text-gray-800">Your Net Payout:</span>
+                                                                <span class="text-xl font-bold text-emerald-600">' . format_currency($netEarnings, 2) . '</span>
                                                             </div>
                                                         </div>
                                                     </div>';
@@ -516,14 +528,21 @@ class OrderResource extends Resource
                     ->visible(fn () => auth()->user()?->isVendor() ?? false),
 
                 Tables\Columns\TextColumn::make('vendor_earnings')
-                    ->label('Your Earnings')
+                    ->label('Your Net Payout')
                     ->getStateUsing(function ($record) {
                         $vendor = auth()->user()?->vendor;
                         if (!$vendor) return '₹0.00';
-                        $sum = $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
+                        $commissionRate = $vendor->commission_rate;
+                        $gross = $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
                             return ($item->quantity ?? 1) * ($item->price ?? 0);
                         });
-                        return format_currency($sum, 2);
+                        $net = $gross * (1 - ($commissionRate / 100));
+                        return format_currency($net, 2);
+                    })
+                    ->description(function ($record) {
+                        $vendor = auth()->user()?->vendor;
+                        if (!$vendor) return '';
+                        return "after {$vendor->commission_rate}% fee";
                     })
                     ->badge()
                     ->color('success')
