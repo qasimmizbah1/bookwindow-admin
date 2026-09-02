@@ -108,7 +108,7 @@ class ProductController extends Controller
             'description',
             'mrp',
             'price',
-            'language',
+            'book_language',
             )
             ->get();
 
