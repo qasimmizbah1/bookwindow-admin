@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderConfirmation;
 use App\Mail\AdminOrderNotification;
+use App\Mail\VendorOrderNotification;
+use App\Models\Vendor;
 use App\Services\RazorpayService;
 use Illuminate\Support\Facades\Log;
 
@@ -325,21 +327,31 @@ class CheckoutController extends Controller
 
     protected function sendOrderEmails(Order $order, $request)
     {
-        
         try {
-            //$customerEmail = $request->email;
-             $customerEmail = $order->email ?? ($request ? $request->email : null);
-            // Send confirmation email to customer
+            $customerEmail = $order->email ?? ($request ? $request->email : null);
+            // 1. Send confirmation email to customer
             if ($customerEmail) {
                 Mail::to($customerEmail)->send(new OrderConfirmation($order));
             }
 
-            // Send notification to admin
-            $adminEmail = env('ADMIN_EMAIL'); //config('mail.admin_email'); // Add this to your .env
+            // 2. Send notification to admin
+            $adminEmail = env('ADMIN_EMAIL');
             if ($adminEmail) {
                 Mail::to($adminEmail)->send(new AdminOrderNotification($order));
             }
-             
+
+            // 3. Send notification to each vendor who has items in this order
+            $order->loadMissing(['items.product', 'items.vendor.user']);
+            $vendorGroups = $order->items->whereNotNull('vendor_id')->groupBy('vendor_id');
+
+            foreach ($vendorGroups as $vendorId => $vendorItems) {
+                $vendor = $vendorItems->first()?->vendor ?? Vendor::with('user')->find($vendorId);
+                $vendorEmail = $vendor?->user?->email;
+
+                if ($vendor && $vendorEmail) {
+                    Mail::to($vendorEmail)->send(new VendorOrderNotification($order, $vendor, $vendorItems));
+                }
+            }
 
         } catch (\Exception $e) {
             logger()->error('Email sending error:', [
