@@ -1,0 +1,36 @@
+[21-May-2026 23:36:55 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php on line 19
+[21-May-2026 23:36:56 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php on line 16
+[24-May-2026 15:46:29 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php on line 19
+[24-May-2026 15:46:29 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php on line 16
+[30-May-2026 13:29:09 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php on line 19
+[30-May-2026 13:29:10 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php on line 16
+[17-Jun-2026 07:05:57 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/mail.php:17
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/mail.php on line 17
+[18-Jun-2026 23:13:38 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php:19
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/database.php on line 19
+[18-Jun-2026 23:13:38 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php:16
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/config/app.php on line 16

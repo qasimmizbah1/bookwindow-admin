@@ -1,0 +1,45 @@
+[26-Sep-2025 06:12:25 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:12:25 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:12:27 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:12:27 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:23:15 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:23:15 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:38 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:38 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:40 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:40 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:42 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:42 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:46 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:27:46 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:29:38 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:29:38 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:37:08 UTC] PHP Warning:  require(/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php): Failed to open stream: No such file or directory in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
+[26-Sep-2025 06:37:08 UTC] PHP Fatal error:  Uncaught Error: Failed opening required '/home/wordofei/bookwindow.wordpresstechsupport.agency/public/../vendor/autoload.php' (include_path='.:/opt/alt/php82/usr/share/pear:/opt/alt/php82/usr/share/php:/usr/share/pear:/usr/share/php') in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php:14
+Stack trace:
+#0 {main}
+  thrown in /home/wordofei/bookwindow.wordpresstechsupport.agency/public/index.php on line 14
