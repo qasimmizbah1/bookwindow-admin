@@ -145,13 +145,18 @@ table {
         </td>
         
         <td class="shipping-from">
-            <h4>Shipping From,</h4>
+            <h4>Shipping From / Sold By,</h4>
             <p style="margin:0;">
                 @if(isset($vendor) && $vendor)
                     <span class="bold">{{ $vendor->vendor_name }}</span><br>
-                    <span class="bold">Address:</span> {{ $vendor->vendor_address ?? 'Jaipur, Rajasthan' }}<br>
+                    @if($vendor->contact_person)<span class="bold">Contact:</span> {{ $vendor->contact_person }}<br>@endif
+                    <span class="bold">Address:</span> {{ $vendor->vendor_address }}
+                    @if($vendor->city || $vendor->state), {{ $vendor->city }} {{ $vendor->state }}@endif
+                    @if($vendor->pincode) - {{ $vendor->pincode }}@endif<br>
                     <span class="bold">Phone:</span> {{ $vendor->vendor_phone ?? '+91 9468 888227' }}<br>
-                    <span class="bold">Fulfilled via:</span> BookWindow Platform
+                    @if($vendor->gst_number)<span class="bold">GSTIN:</span> {{ $vendor->gst_number }}<br>@endif
+                    @if($vendor->pan_number)<span class="bold">PAN:</span> {{ $vendor->pan_number }}<br>@endif
+                    <span class="bold" style="color: #666; font-size: 11px;">(Fulfilled via BookWindow Platform)</span>
                 @else
                     <span class="bold">BOOKWINDOW</span><br>
                     <span class="bold">Store:</span> Shop No. 8, Maharani Garden road near by Hotel<br>

@@ -11,8 +11,18 @@ class OrderPdfController extends Controller
     {
         $order->load(['items.product', 'items.vendor']);
 
-        $vendor = auth()->check() && auth()->user()->isVendor() ? auth()->user()->vendor : null;
-        $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
+        $vendor = null;
+        if (auth()->check() && auth()->user()->isVendor()) {
+            $vendor = auth()->user()->vendor;
+            $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
+        } else {
+            $items = $order->items;
+            // If all items belong to a single vendor, use that vendor for seller details
+            $firstVendor = $order->items->first()?->vendor;
+            if ($firstVendor && $order->items->every(fn ($item) => $item->vendor_id === $firstVendor->id)) {
+                $vendor = $firstVendor;
+            }
+        }
 
         $pdf = Pdf::loadView('pdf.order', [
             'order' => $order,
@@ -29,8 +39,17 @@ class OrderPdfController extends Controller
     {
         $order->load(['items.product', 'items.vendor']);
 
-        $vendor = auth()->check() && auth()->user()->isVendor() ? auth()->user()->vendor : null;
-        $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
+        $vendor = null;
+        if (auth()->check() && auth()->user()->isVendor()) {
+            $vendor = auth()->user()->vendor;
+            $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
+        } else {
+            $items = $order->items;
+            $firstVendor = $order->items->first()?->vendor;
+            if ($firstVendor && $order->items->every(fn ($item) => $item->vendor_id === $firstVendor->id)) {
+                $vendor = $firstVendor;
+            }
+        }
 
         return view('pdf.order', [
             'order' => $order,
