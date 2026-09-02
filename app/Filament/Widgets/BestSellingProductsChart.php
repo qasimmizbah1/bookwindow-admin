@@ -9,6 +9,11 @@ use Filament\Widgets\ChartWidget;
 
 class BestSellingProductsChart extends ChartWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected static ?string $heading = 'Best Selling Products';
     protected static ?string $maxHeight = '300px';
 

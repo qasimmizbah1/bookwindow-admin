@@ -29,6 +29,11 @@ class SalesAnalyticsResource extends Resource
     protected static ?string $modelLabel = 'Sales Analytics';
     protected static ?int $navigationSort = 1;
     
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+    
     public static function getPages(): array
     {
         return [

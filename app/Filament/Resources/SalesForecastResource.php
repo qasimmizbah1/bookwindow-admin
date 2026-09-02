@@ -27,6 +27,11 @@ class SalesForecastResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function table(Tables\Table $table): Tables\Table
     {
         return $table

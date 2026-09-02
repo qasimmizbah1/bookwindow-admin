@@ -28,8 +28,13 @@ class CmsPostResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-pencil';
     protected static ?string $navigationGroup = 'Blog';
     protected static ?int $navigationSort = 2;
-     protected static ?string $modelLabel = 'Blog Post';
+    protected static ?string $modelLabel = 'Blog Post';
     protected static ?string $pluralModelLabel = 'Blog Posts';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();

@@ -31,6 +31,11 @@ class CategoryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-bookmark';
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function getNavigationBadge(): ?string
     {
         //return static::getModel()::count();

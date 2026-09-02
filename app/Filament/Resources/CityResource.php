@@ -24,6 +24,11 @@ class CityResource extends Resource
 
     protected static ?string $navigationGroup = 'Locations';
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
 
 
     public static function form(Form $form): Form

@@ -71,6 +71,13 @@ class EditProduct extends EditRecord
     {
         $data['updated_by'] = auth()->id();
 
+        if (auth()->user()->isVendor()) {
+            $vendor = auth()->user()->vendor;
+            if ($vendor) {
+                $data['vendor_id'] = $vendor->id;
+            }
+        }
+
         return $data;
     }
    

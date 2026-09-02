@@ -9,10 +9,15 @@ class OrderPdfController extends Controller
 {
     public function download(Order $order)
     {
-        $order->load('items.product');
+        $order->load(['items.product', 'items.vendor']);
+
+        $vendor = auth()->check() && auth()->user()->isVendor() ? auth()->user()->vendor : null;
+        $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
 
         $pdf = Pdf::loadView('pdf.order', [
-            'order' => $order
+            'order' => $order,
+            'vendor' => $vendor,
+            'items' => $items,
         ]);
 
         return $pdf->download(
@@ -22,10 +27,15 @@ class OrderPdfController extends Controller
     
     public function print(Order $order)
     {
-        $order->load('items.product');
+        $order->load(['items.product', 'items.vendor']);
+
+        $vendor = auth()->check() && auth()->user()->isVendor() ? auth()->user()->vendor : null;
+        $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
 
         return view('pdf.order', [
             'order' => $order,
+            'vendor' => $vendor,
+            'items' => $items,
             'is_print' => true
         ]);
     }

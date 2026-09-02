@@ -10,6 +10,11 @@ use App\Filament\Resources\OrderResource;
 
 class LatestOrders extends BaseWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected int | string | array $columnSpan = 'full';
     
     protected static ?int $sort = 6;

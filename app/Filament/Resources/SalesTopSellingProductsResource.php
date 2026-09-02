@@ -25,6 +25,12 @@ class SalesTopSellingProductsResource extends Resource
     protected static ?string $navigationGroup = 'Reports';
     protected static ?string $modelLabel = 'Best Selling';
     protected static ?int $navigationSort = 4;
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
      public static function canCreate(): bool { return false; }
     public static function canEdit($record): bool { return false; }
 

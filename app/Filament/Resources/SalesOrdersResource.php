@@ -33,6 +33,11 @@ class SalesOrdersResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function canCreate(): bool { return false; }
     public static function canEdit($record): bool { return false; }
 

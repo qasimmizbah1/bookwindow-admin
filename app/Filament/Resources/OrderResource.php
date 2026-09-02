@@ -52,7 +52,35 @@ class OrderResource extends Resource
     // Show pending order count in navigation
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::where('status', '=', 'pending')->count();
+        if (auth()->user()?->isVendor()) {
+            $vendor = auth()->user()->vendor;
+            if ($vendor) {
+                return (string) static::getModel()::whereHas('items', function ($q) use ($vendor) {
+                    $q->where('vendor_id', $vendor->id);
+                })->whereIn('status', ['new', 'pending', 'processing'])->count();
+            }
+            return '0';
+        }
+
+        return (string) static::getModel()::where('status', '=', 'pending')->count();
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()?->isVendor()) {
+            $vendor = auth()->user()->vendor;
+            if ($vendor) {
+                $query->whereHas('items', function ($q) use ($vendor) {
+                    $q->where('vendor_id', $vendor->id);
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        return $query;
     }
 
     public static function form(Form $form): Form
@@ -213,6 +241,7 @@ class OrderResource extends Resource
 
                                 // Order Financial Details - Show as view only
                                 Section::make('Financial Details')
+                                    ->visible(fn () => auth()->user()?->isAdmin() ?? false)
                                     ->schema([
                                         Grid::make(3)
                                             ->schema([
@@ -293,6 +322,17 @@ class OrderResource extends Resource
                                                     return '<div class="text-center text-gray-500 py-8">No items found in this order</div>';
                                                 }
                                                 
+                                                $isVendor = auth()->user()?->isVendor() ?? false;
+                                                $vendor = auth()->user()?->vendor;
+
+                                                $items = ($isVendor && $vendor)
+                                                    ? $record->items->where('vendor_id', $vendor->id)
+                                                    : $record->items;
+
+                                                if ($items->isEmpty()) {
+                                                    return '<div class="text-center text-gray-500 py-8">No products belonging to your store found in this order.</div>';
+                                                }
+
                                                 $html = '<div class="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
                                                     <table class="w-full border-collapse">
                                                         <thead>
@@ -307,14 +347,14 @@ class OrderResource extends Resource
                                                         <tbody class="divide-y divide-gray-200">';
                                                 
                                                 $counter = 1;
-                                                foreach ($record->items as $item) {
-                                                    $productName = $item->product ? $item->product->name : 'Product #' . $item->product_id;
-                                                    $subtotal = $item->quantity * $item->price;
+                                                foreach ($items as $item) {
+                                                    $productName = $item->product ? $item->product->name : ($item->product_name ?? 'Product #' . $item->product_id);
+                                                    $subtotal = ($item->quantity ?? 1) * ($item->price ?? 0);
                                                     $html .= '<tr class="transition-colors duration-150">
                                                         <td class="px-4 py-3 text-sm text-gray-500">' . $counter . '</td>
                                                         <td class="px-4 py-3 text-sm font-medium text-gray-700">' . e($productName) . '</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-700">' . $item->quantity . '</td>
-                                                        <td class="px-4 py-3 text-sm text-right text-gray-700">' . format_currency($item->price, 2) . '</td>
+                                                        <td class="px-4 py-3 text-sm text-center text-gray-700">' . ($item->quantity ?? 1) . '</td>
+                                                        <td class="px-4 py-3 text-sm text-right text-gray-700">' . format_currency($item->price ?? 0, 2) . '</td>
                                                         <td class="px-4 py-3 text-sm text-right font-semibold text-gray-700">' . format_currency($subtotal, 2) . '</td>
                                                     </tr>';
                                                     $counter++;
@@ -322,40 +362,54 @@ class OrderResource extends Resource
                                                 
                                                 $html .= '</tbody></table></div>';
                                                 
-                                                // Add summary with better styling
-                                                $totalItems = $record->items->sum('quantity');
-                                                $totalAmount = $record->items->sum(function ($item) {
-                                                    return $item->quantity * $item->price;
+                                                $totalItems = $items->sum('quantity');
+                                                $totalAmount = $items->sum(function ($item) {
+                                                    return ($item->quantity ?? 1) * ($item->price ?? 0);
                                                 });
                                                 
-                                                $html .= '<div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
-                                                    <div class="max-w-md ml-auto">
-                                                        <div class="flex justify-between py-2 border-b border-gray-200">
-                                                            <span class="text-sm font-medium text-gray-600">Total Items:</span>
-                                                            <span class="text-sm font-semibold text-gray-700">' . $totalItems . '</span>
+                                                if ($isVendor) {
+                                                    $html .= '<div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                                        <div class="max-w-md ml-auto">
+                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                                <span class="text-sm font-medium text-gray-600">Your Items Total:</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . $totalItems . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between pt-3 mt-1">
+                                                                <span class="text-base font-bold text-gray-700">Your Earnings:</span>
+                                                                <span class="text-xl font-bold text-emerald-600">' . format_currency($totalAmount, 2) . '</span>
+                                                            </div>
                                                         </div>
-                                                        <div class="flex justify-between py-2 border-b border-gray-200">
-                                                            <span class="text-sm font-medium text-gray-600">Items Subtotal:</span>
-                                                            <span class="text-sm font-semibold text-gray-700">' . format_currency($totalAmount, 2) . '</span>
+                                                    </div>';
+                                                } else {
+                                                    $html .= '<div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                                        <div class="max-w-md ml-auto">
+                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                                <span class="text-sm font-medium text-gray-600">Total Items:</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . $totalItems . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                                <span class="text-sm font-medium text-gray-600">Items Subtotal:</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($totalAmount, 2) . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                                <span class="text-sm font-medium text-gray-600">Shipping:</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($record->shipping_amount ?? 0, 2) . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                                <span class="text-sm font-medium text-gray-600">Discount:</span>
+                                                                <span class="text-sm font-semibold text-gray-700">-' . format_currency($record->discount_amount ?? 0, 2) . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                                <span class="text-sm font-medium text-gray-600">Tax:</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($record->tax_amount ?? 0, 2) . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between pt-3 mt-1">
+                                                                <span class="text-base font-bold text-gray-700">Grand Total:</span>
+                                                                <span class="text-xl font-bold text-gray-700">' . format_currency($record->total_amount ?? 0, 2) . '</span>
+                                                            </div>
                                                         </div>
-                                                        <div class="flex justify-between py-2 border-b border-gray-200">
-                                                            <span class="text-sm font-medium text-gray-600">Shipping:</span>
-                                                            <span class="text-sm font-semibold text-gray-700">' . format_currency($record->shipping_amount ?? 0, 2) . '</span>
-                                                        </div>
-                                                        <div class="flex justify-between py-2 border-b border-gray-200">
-                                                            <span class="text-sm font-medium text-gray-600">Discount:</span>
-                                                            <span class="text-sm font-semibold text-gray-700">-' . format_currency($record->discount_amount ?? 0, 2) . '</span>
-                                                        </div>
-                                                        <div class="flex justify-between py-2 border-b border-gray-200">
-                                                            <span class="text-sm font-medium text-gray-600">Tax:</span>
-                                                            <span class="text-sm font-semibold text-gray-700">' . format_currency($record->tax_amount ?? 0, 2) . '</span>
-                                                        </div>
-                                                        <div class="flex justify-between pt-3 mt-1">
-                                                            <span class="text-base font-bold text-gray-700">Grand Total:</span>
-                                                            <span class="text-xl font-bold text-gray-700">' . format_currency($record->total_amount ?? 0, 2) . '</span>
-                                                        </div>
-                                                    </div>
-                                                </div>';
+                                                    </div>';
+                                                }
                                                 
                                                 return new \Illuminate\Support\HtmlString($html);
                                             })
@@ -452,11 +506,35 @@ class OrderResource extends Resource
                 //     ->money('INR')
                 //     ->sortable(),
                 
+                Tables\Columns\TextColumn::make('vendor_items_count')
+                    ->label('Your Items')
+                    ->getStateUsing(function ($record) {
+                        $vendor = auth()->user()?->vendor;
+                        if (!$vendor) return '0';
+                        return $record->items->where('vendor_id', $vendor->id)->sum('quantity') . ' item(s)';
+                    })
+                    ->visible(fn () => auth()->user()?->isVendor() ?? false),
+
+                Tables\Columns\TextColumn::make('vendor_earnings')
+                    ->label('Your Earnings')
+                    ->getStateUsing(function ($record) {
+                        $vendor = auth()->user()?->vendor;
+                        if (!$vendor) return '₹0.00';
+                        $sum = $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
+                            return ($item->quantity ?? 1) * ($item->price ?? 0);
+                        });
+                        return format_currency($sum, 2);
+                    })
+                    ->badge()
+                    ->color('success')
+                    ->visible(fn () => auth()->user()?->isVendor() ?? false),
+
                 Tables\Columns\TextColumn::make('total_amount')
                     ->label('Total')
                     ->money()
                     ->sortable()
                     ->searchable()
+                    ->visible(fn () => auth()->user()?->isAdmin() ?? false)
                     ->summarize([
                         Tables\Columns\Summarizers\Sum::make()->money(),
                     ]),
@@ -469,9 +547,10 @@ class OrderResource extends Resource
             ])
             ->defaultSort('id', 'desc')
             ->headerActions([
-                // Only import action, no create button
+                // Only import action for admin
                 Action::make('import')
                     ->label('Import Orders')
+                    ->visible(fn () => auth()->user()?->isAdmin() ?? false)
                     ->action(function (array $data) {
                         $file = storage_path('app/public/' . $data['file']);
                         if (!file_exists($file)) {
@@ -497,6 +576,7 @@ class OrderResource extends Resource
                         "new"=>"New",
                         "pending"=>"Pending",
                         "processing"=>"Processing",
+                        "order_shipped"=>"Order Shipped",
                         "completed"=>"Completed",
                         "declined"=>"Declined",
                         "cancelled"=>"Cancelled",
@@ -541,9 +621,15 @@ class OrderResource extends Resource
                     Tables\Actions\ViewAction::make()
                         ->label('View'),
                     Tables\Actions\EditAction::make()
-                        ->label('Edit'),
+                        ->label('Edit / Fulfill'),
+                    Tables\Actions\Action::make('printInvoice')
+                        ->label('Print Slip')
+                        ->icon('heroicon-o-printer')
+                        ->color('primary')
+                        ->url(fn ($record) => "javascript:window.open('" . route('orders.print', $record->id) . "', 'Print', 'width=800,height=600'); void(0);"),
                     Tables\Actions\DeleteAction::make()
-                        ->label('Delete'),
+                        ->label('Delete')
+                        ->visible(fn () => auth()->user()?->isAdmin() ?? false),
                     // Custom action to update status quickly
                     Tables\Actions\Action::make('updateStatus')
                         ->label('Update Status')
@@ -554,20 +640,30 @@ class OrderResource extends Resource
                                     "new"=>"New",
                                     "pending"=>"Pending",
                                     "processing"=>"Processing",
+                                    "order_shipped"=>"Order Shipped",
                                     "completed"=>"Completed",
                                     "declined"=>"Declined",
                                     "cancelled"=>"Cancelled",
                                 ])
                                 ->required(),
+                            TextInput::make('tracking_id')
+                                ->label('Tracking / Courier ID')
+                                ->placeholder('e.g. DTDC12345678')
+                                ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
                         ])
                         ->action(function ($record, array $data) {
-                            $record->update(['status' => $data['status']]);
+                            $updateData = ['status' => $data['status']];
+                            if (!empty($data['tracking_id'])) {
+                                $updateData['tracking_id'] = $data['tracking_id'];
+                            }
+                            $record->update($updateData);
                         }),
                     
-                    // Custom action to update payment status
+                    // Custom action to update payment status (Admin only)
                     Tables\Actions\Action::make('updatePayment')
                         ->label('Update Payment')
                         ->icon('heroicon-o-credit-card')
+                        ->visible(fn () => auth()->user()?->isAdmin() ?? false)
                         ->form([
                             Select::make('payment_status')
                                 ->options([
@@ -585,7 +681,8 @@ class OrderResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->visible(fn () => auth()->user()?->isAdmin() ?? false),
                     Tables\Actions\BulkAction::make('updateStatusBulk')
                         ->label('Update Status')
                         ->icon('heroicon-o-arrow-path')

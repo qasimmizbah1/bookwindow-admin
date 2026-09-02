@@ -28,6 +28,11 @@ class ProductionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-bolt';
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     protected static ?string $navigationLabel = 'Publication';
 
     public static function getNavigationBadge(): ?string

@@ -28,6 +28,11 @@ class CmsPageResource extends Resource
     protected static ?string $navigationGroup = 'Pages';
     protected static ?string $modelLabel = 'Page';
     protected static ?string $pluralModelLabel = 'Pages';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
     
     public static function getNavigationBadge(): ?string
     {

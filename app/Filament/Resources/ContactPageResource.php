@@ -21,6 +21,11 @@ class ContactPageResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-bottom-center';
     protected static ?int $navigationSort = 2;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

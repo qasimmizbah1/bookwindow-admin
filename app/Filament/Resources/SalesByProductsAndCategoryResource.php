@@ -22,9 +22,13 @@ class SalesByProductsAndCategoryResource extends Resource
     protected static ?string $navigationLabel = 'Sales by products and category';
     protected static ?string $modelLabel = 'Sales Report';
     protected static ?string $navigationGroup = 'Reports';
-    //protected static ?string $model = null;
     protected static ?string $model = \App\Models\SalesByProductsAndCategory::class;
     protected static ?int $navigationSort = 2;
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function table(Table $table): Table
     {

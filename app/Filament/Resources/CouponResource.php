@@ -25,6 +25,11 @@ class CouponResource extends Resource
 
     protected static ?string $navigationGroup = "Shop";
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::count();

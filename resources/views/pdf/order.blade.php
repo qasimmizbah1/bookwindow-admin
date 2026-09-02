@@ -147,13 +147,20 @@ table {
         <td class="shipping-from">
             <h4>Shipping From,</h4>
             <p style="margin:0;">
-                <span class="bold">BOOKWINDOW</span><br>
-                <span class="bold">Store:</span> Shop No. 8, Maharani Garden road near by Hotel<br>
-                Dwarika Palace, Mangyawas, Jaipur, 302020, Rajasthan<br>
-                <span class="bold">Code:</span> 302020<br>
-                <span class="bold">Phone No:</span> +91 9468 888227<br>
-                <span class="bold">E-mail ID:</span> info@bookwindow.in<br>
-                <span class="bold">Website:</span> www.bookwindow.in
+                @if(isset($vendor) && $vendor)
+                    <span class="bold">{{ $vendor->vendor_name }}</span><br>
+                    <span class="bold">Address:</span> {{ $vendor->vendor_address ?? 'Jaipur, Rajasthan' }}<br>
+                    <span class="bold">Phone:</span> {{ $vendor->vendor_phone ?? '+91 9468 888227' }}<br>
+                    <span class="bold">Fulfilled via:</span> BookWindow Platform
+                @else
+                    <span class="bold">BOOKWINDOW</span><br>
+                    <span class="bold">Store:</span> Shop No. 8, Maharani Garden road near by Hotel<br>
+                    Dwarika Palace, Mangyawas, Jaipur, 302020, Rajasthan<br>
+                    <span class="bold">Code:</span> 302020<br>
+                    <span class="bold">Phone No:</span> +91 9468 888227<br>
+                    <span class="bold">E-mail ID:</span> info@bookwindow.in<br>
+                    <span class="bold">Website:</span> www.bookwindow.in
+                @endif
             </p>
         </td>
     </tr>
@@ -168,6 +175,13 @@ table {
     </p>
 </div>
 
+@php
+    $displayItems = isset($items) ? $items : $order->items;
+    $itemsTotal = $displayItems->sum(function($item) {
+        return ($item->quantity ?? 1) * ($item->price ?? 0);
+    });
+@endphp
+
 <table class="items-table">
     <thead>
         <tr>
@@ -180,9 +194,9 @@ table {
         </tr>
     </thead>
     <tbody>
-        @foreach($order->items as $index => $item)
+        @foreach($displayItems as $index => $item)
         <tr>
-            <td align="center">{{ $index + 1 }}</td>
+            <td align="center">{{ $loop->iteration }}</td>
             <td class="product-col">{{ $item->product?->name }}</td>
             <td align="center">{{ $item->product?->model ?? '-' }}</td>
             <td align="center" class="bold">{{ $item->quantity }}</td>
@@ -194,6 +208,16 @@ table {
 </table>
 
 <table class="totals-table">
+    @if(isset($vendor) && $vendor)
+    <tr>
+        <td class="label">Total Items:</td>
+        <td class="value">{{ $displayItems->sum('quantity') }}</td>
+    </tr>
+    <tr>
+        <td class="label">Vendor Total:</td>
+        <td class="value bold">₹{{ number_format($itemsTotal, 2) }}</td>
+    </tr>
+    @else
     <tr>
         <td class="label">Sub Total:</td>
         <td class="value">₹{{ number_format($order->subtotal, 2) }}</td>
@@ -224,6 +248,7 @@ table {
         <td class="label">Total</td>
         <td class="value bold">₹{{ number_format($order->total_amount, 2) }}</td>
     </tr>
+    @endif
 </table>
 
 <div style="clear:both"></div>

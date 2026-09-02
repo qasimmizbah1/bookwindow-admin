@@ -26,8 +26,13 @@ class CmsCategoryResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-c-at-symbol';
     protected static ?string $navigationGroup = 'Blog';
-     protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 1;
     protected static ?string $pluralModelLabel = 'Blog Categories';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
 
     public static function getNavigationBadge(): ?string

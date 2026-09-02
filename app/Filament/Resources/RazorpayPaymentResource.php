@@ -21,6 +21,10 @@ class RazorpayPaymentResource extends Resource
     protected static ?string $navigationGroup = 'Payments';
     protected static ?string $label = 'Razorpay Payments';
     protected static ?string $slug = 'razorpay-payments';
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
     public static function shouldRegisterNavigation(): bool
     {
         return false;

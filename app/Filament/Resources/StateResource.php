@@ -19,7 +19,12 @@ class StateResource extends Resource
     protected static ?string $model = State::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-map';
-      protected static ?string $navigationGroup = 'Locations';
+    protected static ?string $navigationGroup = 'Locations';
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
 
     public static function form(Form $form): Form
     {
