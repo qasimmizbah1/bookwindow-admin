@@ -18,10 +18,6 @@ class CreateUser extends CreateRecord
             $vendorData = $this->data['vendor'] ?? [];
             $vendorData['user_id'] = $this->record->id;
 
-            if (!isset($vendorData['commission_percentage']) || $vendorData['commission_percentage'] === '') {
-                $vendorData['commission_percentage'] = 7.00;
-            }
-
             if (!isset($vendorData['approval_status']) || empty($vendorData['approval_status'])) {
                 $vendorData['approval_status'] = 'approved';
             }

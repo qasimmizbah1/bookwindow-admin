@@ -44,7 +44,6 @@ class EditUser extends EditRecord
                 'account_number' => $vendor->account_number,
                 'ifsc_code' => $vendor->ifsc_code,
                 'upi_id' => $vendor->upi_id,
-                'commission_percentage' => $vendor->commission_percentage ?? 7.00,
                 'approval_status' => $vendor->approval_status ?? 'approved',
             ];
         }
@@ -60,10 +59,6 @@ class EditUser extends EditRecord
         if (isset($data['role']) && $data['role'] === 'vendor') {
             if (isset($data['vendor'])) {
                 $vendorData = $data['vendor'];
-                
-                if (!isset($vendorData['commission_percentage']) || $vendorData['commission_percentage'] === '') {
-                    $vendorData['commission_percentage'] = 7.00;
-                }
 
                 if ($this->record->vendor) {
                     $this->record->vendor->update($vendorData);

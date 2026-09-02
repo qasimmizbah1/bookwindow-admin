@@ -51,11 +51,11 @@ class Vendor extends Model
     }
 
     /**
-     * Get commission percentage (default 7.00% if not explicitly set)
+     * Get global platform commission percentage (managed centrally via Settings)
      */
     public function getCommissionRateAttribute(): float
     {
-        return (float) ($this->commission_percentage ?? 7.00);
+        return Setting::getVendorCommission();
     }
 
     /**

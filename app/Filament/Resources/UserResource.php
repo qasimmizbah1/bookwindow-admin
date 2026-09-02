@@ -61,19 +61,9 @@ class UserResource extends Resource
                         ->required(),
                 ])->columns(2),
             
-            // 🔥 Commission & Account Status
-            Forms\Components\Section::make('Commission & Platform Settings')
+            // 🔥 Account Status
+            Forms\Components\Section::make('Vendor Account Status')
                 ->schema([
-                    Forms\Components\TextInput::make('vendor.commission_percentage')
-                        ->label('Platform Commission (%)')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->default(7.00)
-                        ->suffix('%')
-                        ->required(fn (Forms\Get $get) => $get('role') === 'vendor')
-                        ->helperText('Platform fee % deducted from each sale. Default is 7.00%. Admin can customize per vendor.'),
-                    
                     Forms\Components\Select::make('vendor.approval_status')
                         ->label('Vendor Approval Status')
                         ->options([
@@ -83,9 +73,10 @@ class UserResource extends Resource
                         ])
                         ->default('approved')
                         ->required(fn (Forms\Get $get) => $get('role') === 'vendor')
+                        ->helperText('Platform commission is configured centrally for all vendors in Settings > Commission Settings.')
                         ->native(false),
                 ])
-                ->columns(2)
+                ->columns(1)
                 ->visible(fn (Forms\Get $get) => $get('role') === 'vendor'),
 
             // 🔥 Store & Contact Information
@@ -258,13 +249,12 @@ class UserResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                // 🔥 Commission Rate
-                Tables\Columns\TextColumn::make('vendor.commission_percentage')
+                // 🔥 Commission Rate (Global)
+                Tables\Columns\TextColumn::make('commission_rate')
                     ->label('Commission')
-                    ->formatStateUsing(fn ($state, $record) => $record->isVendor() ? ($state ?? '7.00') . '%' : '-')
+                    ->getStateUsing(fn ($record) => $record->isVendor() ? \App\Models\Setting::getVendorCommission() . '%' : '-')
                     ->badge()
-                    ->color('warning')
-                    ->sortable(),
+                    ->color('warning'),
                 
                 // 🔥 Approval Status
                 Tables\Columns\TextColumn::make('vendor.approval_status')
