@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\StateController;
 use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\SitemapController;
+use App\Http\Controllers\Api\VendorRegistrationController;
 
 //Basic API
 
@@ -140,3 +141,5 @@ Route::post('/newsletter', [NewsletterController::class, 'subscribe']);
 
 
 Route::get('/sitemap-data', [SitemapController::class, 'index']);
+
+Route::post('/vendor-register', [VendorRegistrationController::class, 'register']);
