@@ -8,6 +8,7 @@ use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -266,8 +267,14 @@ class UserResource extends Resource
                         'suspended' => 'danger',
                         default => 'gray',
                     })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'approved' => 'Approved',
+                        'pending' => 'Pending',
+                        'suspended' => 'Suspended',
+                        default => $state ?? 'N/A',
+                    })
                     ->visible(fn () => true)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
                 
                 // 🔥 Vendor Phone
                 Tables\Columns\TextColumn::make('vendor.vendor_phone')
@@ -291,6 +298,16 @@ class UserResource extends Resource
                         'vendor' => 'Vendor',
                     ])
                     ->placeholder('All Roles'),
+
+                Tables\Filters\SelectFilter::make('approval_status')
+                    ->label('Vendor Status')
+                    ->relationship('vendor', 'approval_status')
+                    ->options([
+                        'pending' => 'Pending Verification',
+                        'approved' => 'Approved',
+                        'suspended' => 'Suspended',
+                    ])
+                    ->placeholder('All Vendor Statuses'),
                 
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active users')
@@ -299,6 +316,46 @@ class UserResource extends Resource
                     ->placeholder('All users'),
             ])
             ->actions([
+                Tables\Actions\Action::make('approve_vendor')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Approve Vendor')
+                    ->modalDescription('Are you sure you want to approve this vendor and activate their account? They will be allowed to log in.')
+                    ->visible(fn (User $record) => $record->isVendor() && ($record->vendor?->approval_status !== 'approved' || ! $record->is_active))
+                    ->action(function (User $record) {
+                        $record->update(['is_active' => true]);
+                        if ($record->vendor) {
+                            $record->vendor->update(['approval_status' => 'approved']);
+                        }
+                        Notification::make()
+                            ->title('Vendor Approved')
+                            ->body("Vendor \"{$record->name}\" is now approved and active.")
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('suspend_vendor')
+                    ->label('Suspend')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Suspend Vendor')
+                    ->modalDescription('Are you sure you want to suspend this vendor account? They will be blocked from logging in.')
+                    ->visible(fn (User $record) => $record->isVendor() && $record->vendor?->approval_status === 'approved' && $record->is_active)
+                    ->action(function (User $record) {
+                        $record->update(['is_active' => false]);
+                        if ($record->vendor) {
+                            $record->vendor->update(['approval_status' => 'suspended']);
+                        }
+                        Notification::make()
+                            ->title('Vendor Suspended')
+                            ->body("Vendor \"{$record->name}\" has been suspended.")
+                            ->warning()
+                            ->send();
+                    }),
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

@@ -60,7 +60,8 @@ public function productsBySlug($slug)
         }
 
         // Get products of this production
-        $products = \App\Models\Product::where('production_id', $production->id)
+        $products = \App\Models\Product::visibleToCustomers()
+            ->where('production_id', $production->id)
             ->select(
                 'id',
                 'name',

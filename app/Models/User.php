@@ -3,13 +3,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
@@ -47,6 +49,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -90,4 +93,34 @@ class User extends Authenticatable
         return $this->vendor?->name ?? 'N/A';
     }
 
+    /**
+     * Determine if the user can access the given Filament panel.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // 1. Account must be active
+        if (! $this->is_active) {
+            return false;
+        }
+
+        // 2. Admin can access if active
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        // 3. Vendor can only access if active AND approved
+        if ($this->isVendor()) {
+            return $this->vendor && $this->vendor->approval_status === 'approved';
+        }
+
+        return false;
+    }
+
+    /**
+     * Helper to check if vendor is fully approved and active.
+     */
+    public function isApprovedVendor(): bool
+    {
+        return $this->isVendor() && $this->is_active && $this->vendor?->approval_status === 'approved';
+    }
 }

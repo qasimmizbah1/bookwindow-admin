@@ -25,7 +25,8 @@ public function index()
         ]);
     }
 
-    $products = Product::whereIn('id', $wishlist->products)
+    $products = Product::visibleToCustomers()
+        ->whereIn('id', $wishlist->products)
         ->select(
             'id',
             'name',
@@ -120,6 +121,14 @@ public function wishlistid()
     $request->validate([
         'product_id' => 'required|integer'
     ]);
+
+    $product = Product::visibleToCustomers()->find($request->product_id);
+    if (!$product) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Product not found or unavailable.',
+        ], 404);
+    }
 
     $user = auth('customer')->user();
 

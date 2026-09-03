@@ -10,7 +10,7 @@ class ProductSearchController extends Controller
 {
     public function search(Request $request)
     {
-        $query = Product::query();
+        $query = Product::visibleToCustomers();
 
         // Basic search
         if ($request->has('key') || $request->has('publication')) {

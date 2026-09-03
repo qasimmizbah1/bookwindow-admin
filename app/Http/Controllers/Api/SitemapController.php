@@ -16,22 +16,24 @@ class SitemapController extends Controller
     public function index()
     {
         return response()->json([
-            'pages' => $this->sitemapItems(CmsPage::class),
-            'products' => $this->sitemapItems(Product::class, '/products'),
+            'pages' => $this->sitemapItems(CmsPage::where('is_active', 1)),
+            'products' => $this->sitemapItems(Product::visibleToCustomers(), '/products'),
             'product_categories' => $this->sitemapItems(Category::class, '/category'),
-            'posts' => $this->sitemapItems(CmsPost::class, '/blog'),
+            'posts' => $this->sitemapItems(CmsPost::where('is_active', 1), '/blog'),
             'post_categories' => $this->sitemapItems(CmsCategory::class, '/blog/category'),
-            'publications' => $this->sitemapItems(Production::class, '/publisher'),
+            'publications' => $this->sitemapItems(Production::where('is_visible', 1), '/publisher'),
         ]);
     }
 
-    private function sitemapItems($model, $prefix = '')
-{
-    return $model::select('slug', 'updated_at')
-        ->get()
-        ->map(fn ($item) => [
-            'url' => $item->slug,
-            'updated_at' => $item->updated_at->format('Y-m-d H:i P'),
-        ]);
-}
+    private function sitemapItems($source, $prefix = '')
+    {
+        $query = is_string($source) ? $source::query() : $source;
+
+        return $query->select('slug', 'updated_at')
+            ->get()
+            ->map(fn ($item) => [
+                'url' => $item->slug,
+                'updated_at' => $item->updated_at->format('Y-m-d H:i P'),
+            ]);
+    }
 }

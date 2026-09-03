@@ -34,7 +34,7 @@ class CartController extends Controller
             $token = csrf_token();
 
 
-             $product = Product::findOrFail($request->product_id);
+             $product = Product::visibleToCustomers()->findOrFail($request->product_id);
                 if (auth()->check()) {
                 $cart = Cart::firstOrCreate(
                 ['user_id' => auth()->id()],

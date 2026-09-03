@@ -118,6 +118,25 @@ class Product extends Model
         return $query->where('is_visible', 1);
     }
 
+    /**
+     * Scope a query to only include products visible to website customers:
+     * 1. Product itself must be active (is_visible = 1)
+     * 2. If vendor product: vendor must be approved AND vendor user must be active
+     */
+    public function scopeVisibleToCustomers($query)
+    {
+        return $query->where('is_visible', 1)
+            ->where(function ($q) {
+                $q->whereNull('vendor_id')
+                  ->orWhereHas('vendor', function ($vendorQuery) {
+                      $vendorQuery->where('approval_status', 'approved')
+                                  ->whereHas('user', function ($userQuery) {
+                                      $userQuery->where('is_active', 1);
+                                  });
+                  });
+            });
+    }
+
     //Helper: Check if product has vendor
     public function hasVendor(): bool
     {
