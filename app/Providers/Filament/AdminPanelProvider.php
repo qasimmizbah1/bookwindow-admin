@@ -3,10 +3,12 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Resources\VendorProfileResource;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\MenuItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -35,6 +37,13 @@ class AdminPanelProvider extends PanelProvider
             \Biostate\FilamentMenuBuilder\FilamentMenuBuilderPlugin::make(),
         ])
             ->font(family:'Poppins')
+            ->userMenuItems([
+                MenuItem::make()
+                    ->label('Store Profile')
+                    ->url(fn (): string => VendorProfileResource::getUrl('index'))
+                    ->icon('heroicon-o-building-storefront')
+                    ->visible(fn (): bool => auth()->user()?->isVendor() ?? false),
+            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
