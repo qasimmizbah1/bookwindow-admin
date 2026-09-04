@@ -21,25 +21,38 @@ class VendorRegistrationController extends Controller
 
             'store_name'            => 'required|string|max:255',
             'contact_person_name'   => 'required|string|max:255',
-            'support_phone'         => 'required|digits_between:10,15',
+            'support_phone'         => ['required', 'regex:/^[6-9]\d{9}$/'],
 
             'website'               => 'nullable|url',
             'vendor_logo'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
 
             'warehouse_address'     => 'required|string',
-            'city'                  => 'required|string|max:255',
-            'state'                 => 'required|string|max:255',
-            'pincode'               => 'required|string|max:10',
+            'city'                  => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z\s.\'-]+$/'],
+            'state'                 => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z\s.\'-]+$/'],
+            'pincode'               => 'required|digits:6',
 
-            'pan_number'            => 'required|string|max:20',
-            'gstin'                 => 'nullable|string|max:30',
-            'isbn_license'          => 'nullable|string|max:100',
+            'pan_number'            => ['required', 'string', 'regex:/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/'],
+            'gstin'                 => ['nullable', 'string', 'regex:/^[0-9]{2}[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}[1-9A-Za-z]{1}Z[0-9A-Za-z]{1}$/'],
+            'isbn_license'          => ['nullable', 'string', 'max:50', 'regex:/^[a-zA-Z0-9-]+$/'],
 
-            'bank_name'             => 'required|string|max:255',
-            'account_holder_name'   => 'required|string|max:255',
-            'bank_account_number'   => 'required|string|max:50',
-            'ifsc_code'             => 'required|string|max:20',
-            'upi_id'                => 'nullable|string|max:255',
+            'bank_name'             => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s.&\'\-]+$/'],
+            'account_holder_name'   => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s.\'-]+$/'],
+            'bank_account_number'   => ['required', 'string', 'regex:/^\d{9,18}$/'],
+            'ifsc_code'             => ['required', 'string', 'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/'],
+            'upi_id'                => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z0-9.\-_]{2,64}@[a-zA-Z]{2,32}$/'],
+        ], [
+            'support_phone.regex'        => 'Support phone number must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
+            'city.regex'                 => 'City name must contain only letters and spaces (no special characters).',
+            'state.regex'                => 'State name must contain only letters and spaces (no special characters).',
+            'pincode.digits'             => 'Pincode must be exactly 6 digits.',
+            'pan_number.regex'           => 'Invalid PAN format (e.g. ABCDE1234F). 10 alphanumeric characters required.',
+            'gstin.regex'                => 'Invalid GSTIN format (e.g. 08AAAAA0000A1Z5) - no special characters allowed.',
+            'isbn_license.regex'         => 'Publisher code / ISBN must contain only letters, numbers, and hyphens (no special characters).',
+            'bank_name.regex'            => 'Bank name must contain only letters and spaces (no special characters).',
+            'account_holder_name.regex'  => 'Account holder name must contain only letters and spaces.',
+            'bank_account_number.regex'  => 'Bank account number must be between 9 and 18 digits (numbers only, no special characters).',
+            'ifsc_code.regex'            => 'Invalid IFSC code format (e.g. SBIN0001234). 11 characters required with no special characters.',
+            'upi_id.regex'               => 'Invalid UPI ID format (e.g. store@upi).',
         ]);
 
         if ($validator->fails()) {
