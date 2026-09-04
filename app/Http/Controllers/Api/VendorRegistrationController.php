@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Mail\AdminVendorRegistrationNotification;
+use App\Mail\VendorWelcomeMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class VendorRegistrationController extends Controller
@@ -109,6 +112,26 @@ class VendorRegistrationController extends Controller
             ]);
 
             DB::commit();
+
+            // Dispatch notification emails to vendor and admin
+            try {
+                // 1. Send welcome & acknowledgement email to Vendor
+                if (!empty($user->email)) {
+                    Mail::to($user->email)->send(new VendorWelcomeMail($user, $vendor));
+                }
+
+                // 2. Send registration notification email to Admin
+                $adminEmail = config('mail.admin_email') ?: env('ADMIN_EMAIL');
+                if (!empty($adminEmail)) {
+                    Mail::to($adminEmail)->send(new AdminVendorRegistrationNotification($user, $vendor));
+                }
+            } catch (\Exception $mailEx) {
+                logger()->error('Vendor registration email failed to send: ' . $mailEx->getMessage(), [
+                    'user_id'   => $user->id,
+                    'vendor_id' => $vendor->id,
+                    'trace'     => $mailEx->getTraceAsString(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

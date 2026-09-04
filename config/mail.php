@@ -113,4 +113,14 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Email Address
+    |--------------------------------------------------------------------------
+    |
+    | Default administrator email address to receive system alerts & notifications.
+    |
+    */
+    'admin_email' => env('ADMIN_EMAIL', 'mizbahuddin@techbeeps.com'),
+
 ];

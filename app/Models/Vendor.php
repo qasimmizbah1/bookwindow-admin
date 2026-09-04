@@ -2,10 +2,46 @@
 
 namespace App\Models;
 
+use App\Mail\VendorApprovedMail;
+use App\Mail\VendorSuspendedMail;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Mail;
 
 class Vendor extends Model
 {
+    protected static function booted(): void
+    {
+        static::updated(function (Vendor $vendor) {
+            if ($vendor->wasChanged('approval_status')) {
+                $oldStatus = $vendor->getOriginal('approval_status');
+                $newStatus = $vendor->approval_status;
+
+                $user = $vendor->user ?? User::find($vendor->user_id);
+
+                if ($user && !empty($user->email)) {
+                    if ($newStatus === 'approved' && $oldStatus !== 'approved') {
+                        try {
+                            Mail::to($user->email)->send(new VendorApprovedMail($user, $vendor));
+                        } catch (\Exception $e) {
+                            logger()->error('Failed to send VendorApprovedMail: ' . $e->getMessage(), [
+                                'vendor_id' => $vendor->id,
+                                'user_id' => $user->id,
+                            ]);
+                        }
+                    } elseif ($newStatus === 'suspended' && $oldStatus !== 'suspended') {
+                        try {
+                            Mail::to($user->email)->send(new VendorSuspendedMail($user, $vendor));
+                        } catch (\Exception $e) {
+                            logger()->error('Failed to send VendorSuspendedMail: ' . $e->getMessage(), [
+                                'vendor_id' => $vendor->id,
+                                'user_id' => $user->id,
+                            ]);
+                        }
+                    }
+                }
+            }
+        });
+    }
     protected $fillable = [
         'vendor_name',
         'user_id',

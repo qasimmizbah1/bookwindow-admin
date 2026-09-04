@@ -346,7 +346,7 @@ class UserResource extends Resource
                         }
                         Notification::make()
                             ->title('Vendor Approved')
-                            ->body("Vendor \"{$record->name}\" is now approved and active.")
+                            ->body("Vendor \"{$record->name}\" is now approved and active. Notification email sent to vendor.")
                             ->success()
                             ->send();
                     }),
@@ -366,7 +366,7 @@ class UserResource extends Resource
                         }
                         Notification::make()
                             ->title('Vendor Suspended')
-                            ->body("Vendor \"{$record->name}\" has been suspended.")
+                            ->body("Vendor \"{$record->name}\" has been suspended. Notification email sent to vendor.")
                             ->warning()
                             ->send();
                     }),
