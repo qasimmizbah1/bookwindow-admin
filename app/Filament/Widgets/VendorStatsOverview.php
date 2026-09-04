@@ -33,7 +33,8 @@ class VendorStatsOverview extends BaseWidget
             ];
         }
 
-        $commissionRate = $vendor->commission_rate; // default 7.00% or dynamic
+        $commissionRate = $vendor->commission_rate; // dynamic or global
+        $gstRate = $vendor->commission_gst_rate; // 18% GST on commission
 
         $totalProducts = Product::where('vendor_id', $vendor->id)->count();
         $activeProducts = Product::where('vendor_id', $vendor->id)->where('is_visible', 1)->count();
@@ -47,15 +48,15 @@ class VendorStatsOverview extends BaseWidget
             $q->where('vendor_id', $vendor->id);
         })->whereIn('status', ['new', 'pending', 'processing'])->count();
 
-        $last30DaysGross = OrderItem::where('vendor_id', $vendor->id)
+        $last30DaysGross = (float) OrderItem::where('vendor_id', $vendor->id)
             ->where('created_at', '>=', Carbon::now()->subDays(30))
             ->sum(DB::raw('quantity * price'));
-        $last30DaysNet = $last30DaysGross * (1 - ($commissionRate / 100));
+        $last30DaysNet = $vendor->calculateVendorPayout($last30DaysGross);
 
-        $totalGross = OrderItem::where('vendor_id', $vendor->id)
+        $totalGross = (float) OrderItem::where('vendor_id', $vendor->id)
             ->sum(DB::raw('quantity * price'));
-        $totalNet = $totalGross * (1 - ($commissionRate / 100));
-        $totalPlatformFee = $totalGross * ($commissionRate / 100);
+        $totalNet = $vendor->calculateVendorPayout($totalGross);
+        $totalDeductions = $vendor->calculateTotalDeduction($totalGross);
 
         return [
             Stat::make('My Products', $totalProducts)
@@ -76,17 +77,17 @@ class VendorStatsOverview extends BaseWidget
                 ->color($pendingFulfillment > 0 ? 'danger' : 'success'),
 
             Stat::make('30 Days Net Earnings', '₹' . number_format($last30DaysNet, 2))
-                ->description("Gross: ₹" . number_format($last30DaysGross, 2) . " (-{$commissionRate}% Fee)")
+                ->description("Gross: ₹" . number_format($last30DaysGross, 2) . " (-{$commissionRate}% Fee + {$gstRate}% GST)")
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success'),
 
             Stat::make('Total Lifetime Net Payout', '₹' . number_format($totalNet, 2))
-                ->description("Gross: ₹" . number_format($totalGross, 2) . " | Fee: ₹" . number_format($totalPlatformFee, 2))
+                ->description("Gross: ₹" . number_format($totalGross, 2) . " | Charges: ₹" . number_format($totalDeductions, 2))
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('primary'),
 
-            Stat::make('Platform Fee Rate', "{$commissionRate}%")
-                ->description('Dynamic commission deducted per sale')
+            Stat::make('Platform Fee Rate', "{$commissionRate}% (+{$gstRate}% GST)")
+                ->description('Dynamic commission + 18% GST deducted per sale')
                 ->descriptionIcon('heroicon-m-receipt-percent')
                 ->color('amber'),
         ];

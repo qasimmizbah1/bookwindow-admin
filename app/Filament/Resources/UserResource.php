@@ -62,8 +62,8 @@ class UserResource extends Resource
                         ->required(),
                 ])->columns(2),
             
-            // 🔥 Account Status
-            Forms\Components\Section::make('Vendor Account Status')
+            // 🔥 Account Status & Dynamic Commission
+            Forms\Components\Section::make('Vendor Account & Commission')
                 ->schema([
                     Forms\Components\Select::make('vendor.approval_status')
                         ->label('Vendor Approval Status')
@@ -74,10 +74,19 @@ class UserResource extends Resource
                         ])
                         ->default('approved')
                         ->required(fn (Forms\Get $get) => $get('role') === 'vendor')
-                        ->helperText('Platform commission is configured centrally for all vendors in Settings > Commission Settings.')
                         ->native(false),
+
+                    Forms\Components\TextInput::make('vendor.commission_percentage')
+                        ->label('Custom Dynamic Commission (%)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->suffix('%')
+                        ->nullable()
+                        ->placeholder('Global Default: ' . \App\Models\Setting::getVendorCommission() . '%')
+                        ->helperText('Optional. Leave blank to use platform default (' . \App\Models\Setting::getVendorCommission() . '%). Setting a rate here applies custom commission to this vendor. (18% GST applies on commission).'),
                 ])
-                ->columns(1)
+                ->columns(2)
                 ->visible(fn (Forms\Get $get) => $get('role') === 'vendor'),
 
             // 🔥 Store & Contact Information
@@ -250,10 +259,16 @@ class UserResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                // 🔥 Commission Rate (Global)
+                // 🔥 Commission Rate (Dynamic + GST)
                 Tables\Columns\TextColumn::make('commission_rate')
                     ->label('Commission')
-                    ->getStateUsing(fn ($record) => $record->isVendor() ? \App\Models\Setting::getVendorCommission() . '%' : '-')
+                    ->getStateUsing(function ($record) {
+                        if (! $record->isVendor()) return '-';
+                        $vendor = $record->vendor;
+                        $rate = $vendor?->commission_rate ?? \App\Models\Setting::getVendorCommission();
+                        $gst = $vendor?->commission_gst_rate ?? \App\Models\Setting::getCommissionGst();
+                        return "{$rate}% (+{$gst}% GST)";
+                    })
                     ->badge()
                     ->color('warning'),
                 

@@ -20,7 +20,10 @@ class VendorOrderNotification extends Mailable
     public Collection $vendorItems;
     public float $grossAmount;
     public float $commissionRate;
+    public float $commissionGstRate;
     public float $commissionFee;
+    public float $commissionGst;
+    public float $totalDeduction;
     public float $netPayout;
 
     public function __construct(Order $order, Vendor $vendor, Collection $vendorItems)
@@ -34,8 +37,11 @@ class VendorOrderNotification extends Mailable
         });
 
         $this->commissionRate = $vendor->commission_rate;
-        $this->commissionFee = round($this->grossAmount * ($this->commissionRate / 100), 2);
-        $this->netPayout = round($this->grossAmount - $this->commissionFee, 2);
+        $this->commissionGstRate = $vendor->commission_gst_rate;
+        $this->commissionFee = $vendor->calculateCommissionFee($this->grossAmount);
+        $this->commissionGst = $vendor->calculateCommissionGst($this->grossAmount);
+        $this->totalDeduction = $vendor->calculateTotalDeduction($this->grossAmount);
+        $this->netPayout = $vendor->calculateVendorPayout($this->grossAmount);
     }
 
     public function envelope(): Envelope

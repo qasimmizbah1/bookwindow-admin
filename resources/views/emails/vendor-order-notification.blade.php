@@ -231,6 +231,14 @@
                     <td style="padding: 3px 0; font-size: 13px; color: #d97706;">Platform Commission Fee ({{ $commissionRate }}%):</td>
                     <td style="padding: 3px 0; font-size: 13px; text-align: right; font-weight: 600; color: #d97706;">-₹{{ number_format($commissionFee, 2) }}</td>
                 </tr>
+                <tr>
+                    <td style="padding: 3px 0; font-size: 13px; color: #d97706;">GST on Platform Fee ({{ $commissionGstRate }}%):</td>
+                    <td style="padding: 3px 0; font-size: 13px; text-align: right; font-weight: 600; color: #d97706;">-₹{{ number_format($commissionGst, 2) }}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 3px 0; font-size: 13px; color: #b91c1c; font-weight: 600;">Total Platform Charges:</td>
+                    <td style="padding: 3px 0; font-size: 13px; text-align: right; font-weight: 700; color: #b91c1c;">-₹{{ number_format($totalDeduction, 2) }}</td>
+                </tr>
                 <tr style="border-top: 1px solid #cbd5e1;">
                     <td style="padding: 8px 0 0 0; font-size: 15px; font-weight: 700; color: #059669;">Your Net Payable Payout:</td>
                     <td style="padding: 8px 0 0 0; font-size: 16px; text-align: right; font-weight: 700; color: #059669;">₹{{ number_format($netPayout, 2) }}</td>

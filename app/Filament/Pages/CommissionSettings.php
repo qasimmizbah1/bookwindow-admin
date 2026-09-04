@@ -35,6 +35,7 @@ class CommissionSettings extends Page implements HasForms
     {
         $this->form->fill([
             'vendor_commission_percentage' => Setting::getVendorCommission(),
+            'vendor_commission_gst_percentage' => Setting::getCommissionGst(),
         ]);
     }
 
@@ -42,8 +43,8 @@ class CommissionSettings extends Page implements HasForms
     {
         return $form
             ->schema([
-                Section::make('Global Platform Commission')
-                    ->description('Set a single commission percentage that applies across all vendors automatically.')
+                Section::make('Global Platform Commission & GST')
+                    ->description('Configure platform commission fee and applicable GST on platform services.')
                     ->schema([
                         TextInput::make('vendor_commission_percentage')
                             ->label('Platform Commission Percentage (%)')
@@ -52,9 +53,19 @@ class CommissionSettings extends Page implements HasForms
                             ->maxValue(100)
                             ->suffix('%')
                             ->required()
-                            ->helperText('This commission percentage is automatically applied to all vendor orders. Changing this value here instantly updates all vendors globally.'),
+                            ->helperText('Default commission percentage applied to vendor orders (can also be customized per vendor in User management).'),
+
+                        TextInput::make('vendor_commission_gst_percentage')
+                            ->label('GST on Platform Commission (%)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->required()
+                            ->default(18.00)
+                            ->helperText('Standard GST percentage applicable on platform service fee (e.g. 18%). Deducted alongside commission from vendor order payouts.'),
                     ])
-                    ->columns(1),
+                    ->columns(2),
             ])
             ->statePath('data');
     }
@@ -63,7 +74,7 @@ class CommissionSettings extends Page implements HasForms
     {
         return [
             Action::make('save')
-                ->label('Save Commission Setting')
+                ->label('Save Commission & GST Settings')
                 ->submit('save'),
         ];
     }
@@ -72,12 +83,14 @@ class CommissionSettings extends Page implements HasForms
     {
         $data = $this->form->getState();
         $rate = (float) ($data['vendor_commission_percentage'] ?? 7.00);
+        $gstRate = (float) ($data['vendor_commission_gst_percentage'] ?? 18.00);
 
         Setting::set('vendor_commission_percentage', (string) $rate);
+        Setting::set('vendor_commission_gst_percentage', (string) $gstRate);
 
         Notification::make()
-            ->title('Commission Setting Saved')
-            ->body("Global vendor commission has been set to {$rate}%. All vendor accounts and orders will now use this rate.")
+            ->title('Commission & GST Settings Saved')
+            ->body("Global vendor commission has been set to {$rate}% with {$gstRate}% GST on commission fees.")
             ->success()
             ->send();
     }

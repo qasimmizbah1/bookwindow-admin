@@ -62,16 +62,15 @@ class VendorLatestOrders extends BaseWidget
                     ->label('Net Earnings')
                     ->getStateUsing(function ($record) use ($vendor) {
                         if (!$vendor) return '₹0.00';
-                        $commissionRate = $vendor->commission_rate;
-                        $grossSum = $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
+                        $grossSum = (float) $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
                             return ($item->quantity ?? 1) * ($item->price ?? 0);
                         });
-                        $netSum = $grossSum * (1 - ($commissionRate / 100));
+                        $netSum = $vendor->calculateVendorPayout($grossSum);
                         return '₹' . number_format($netSum, 2);
                     })
                     ->description(function ($record) use ($vendor) {
                         if (!$vendor) return '';
-                        return "after {$vendor->commission_rate}% fee";
+                        return "after {$vendor->commission_rate}% fee + {$vendor->commission_gst_rate}% GST";
                     })
                     ->badge()
                     ->color('success'),

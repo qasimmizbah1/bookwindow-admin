@@ -45,6 +45,7 @@ class EditUser extends EditRecord
                 'ifsc_code' => $vendor->ifsc_code,
                 'upi_id' => $vendor->upi_id,
                 'approval_status' => $vendor->approval_status ?? 'approved',
+                'commission_percentage' => $vendor->commission_percentage,
             ];
         }
 

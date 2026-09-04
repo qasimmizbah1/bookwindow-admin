@@ -45,4 +45,13 @@ class Setting extends Model
         $val = static::get('vendor_commission_percentage', '7.00');
         return is_numeric($val) ? (float) $val : 7.00;
     }
+
+    /**
+     * Get GST rate on platform commission fee percentage (default 18.00%)
+     */
+    public static function getCommissionGst(): float
+    {
+        $val = static::get('vendor_commission_gst_percentage', '18.00');
+        return is_numeric($val) ? (float) $val : 18.00;
+    }
 }

@@ -55,8 +55,10 @@ class VendorProfileResource extends Resource
                         Forms\Components\Placeholder::make('commission_badge')
                             ->label('Platform Commission')
                             ->content(function () {
-                                $rate = Setting::getVendorCommission();
-                                return new HtmlString("<span style='display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 9999px; font-weight: 600; font-size: 0.875rem; background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db;'>{$rate}% Platform Fee</span>");
+                                $vendor = auth()->user()?->vendor;
+                                $rate = $vendor?->commission_rate ?? Setting::getVendorCommission();
+                                $gst = $vendor?->commission_gst_rate ?? Setting::getCommissionGst();
+                                return new HtmlString("<span style='display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 9999px; font-weight: 600; font-size: 0.875rem; background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db;'>{$rate}% Platform Fee (+{$gst}% GST on fee)</span>");
                             }),
 
                         Forms\Components\TextInput::make('user_email')
@@ -144,29 +146,33 @@ class VendorProfileResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('bank_name')
                             ->label('Bank Name')
-                            ->required()
-                            ->maxLength(150),
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('🔒 Contact administrator to update.'),
 
                         Forms\Components\TextInput::make('account_holder_name')
                             ->label('Account Holder Name')
-                            ->required()
-                            ->maxLength(150),
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('🔒 Contact administrator to update.'),
 
                         Forms\Components\TextInput::make('account_number')
                             ->label('Bank Account Number')
-                            ->required()
-                            ->maxLength(50),
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('🔒 Contact administrator to update.'),
 
                         Forms\Components\TextInput::make('ifsc_code')
                             ->label('IFSC Code')
-                            ->required()
-                            ->maxLength(20)
-                            ->extraInputAttributes(['style' => 'text-transform: uppercase']),
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('🔒 Contact administrator to update.'),
 
                         Forms\Components\TextInput::make('upi_id')
                             ->label('UPI ID (Optional)')
-                            ->nullable()
-                            ->maxLength(100),
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('🔒 Contact administrator to update.'),
                     ])
                     ->columns(2),
 

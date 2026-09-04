@@ -369,8 +369,11 @@ class OrderResource extends Resource
                                                 
                                                 if ($isVendor) {
                                                     $commissionRate = $vendor->commission_rate;
-                                                    $commissionAmount = $totalAmount * ($commissionRate / 100);
-                                                    $netEarnings = $totalAmount - $commissionAmount;
+                                                    $gstRate = $vendor->commission_gst_rate;
+                                                    $commissionAmount = $vendor->calculateCommissionFee($totalAmount);
+                                                    $gstAmount = $vendor->calculateCommissionGst($totalAmount);
+                                                    $totalDeduction = $vendor->calculateTotalDeduction($totalAmount);
+                                                    $netEarnings = $vendor->calculateVendorPayout($totalAmount);
 
                                                     $html .= '<div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
                                                         <div class="max-w-md ml-auto">
@@ -385,6 +388,14 @@ class OrderResource extends Resource
                                                             <div class="flex justify-between py-2 border-b border-gray-200 text-amber-700">
                                                                 <span class="text-sm font-medium">Platform Fee (' . $commissionRate . '%):</span>
                                                                 <span class="text-sm font-semibold">-' . format_currency($commissionAmount, 2) . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200 text-amber-700">
+                                                                <span class="text-sm font-medium">GST on Fee (' . $gstRate . '%):</span>
+                                                                <span class="text-sm font-semibold">-' . format_currency($gstAmount, 2) . '</span>
+                                                            </div>
+                                                            <div class="flex justify-between py-2 border-b border-gray-200 text-red-700 font-medium">
+                                                                <span class="text-sm font-semibold">Total Platform Charges:</span>
+                                                                <span class="text-sm font-bold">-' . format_currency($totalDeduction, 2) . '</span>
                                                             </div>
                                                             <div class="flex justify-between pt-3 mt-1">
                                                                 <span class="text-base font-bold text-gray-800">Your Net Payout:</span>
@@ -532,17 +543,16 @@ class OrderResource extends Resource
                     ->getStateUsing(function ($record) {
                         $vendor = auth()->user()?->vendor;
                         if (!$vendor) return '₹0.00';
-                        $commissionRate = $vendor->commission_rate;
                         $gross = $record->items->where('vendor_id', $vendor->id)->sum(function ($item) {
                             return ($item->quantity ?? 1) * ($item->price ?? 0);
                         });
-                        $net = $gross * (1 - ($commissionRate / 100));
+                        $net = $vendor->calculateVendorPayout($gross);
                         return format_currency($net, 2);
                     })
                     ->description(function ($record) {
                         $vendor = auth()->user()?->vendor;
                         if (!$vendor) return '';
-                        return "after {$vendor->commission_rate}% fee";
+                        return "after {$vendor->commission_rate}% fee + {$vendor->commission_gst_rate}% GST";
                     })
                     ->badge()
                     ->color('success')
