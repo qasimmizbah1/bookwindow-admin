@@ -130,12 +130,23 @@ class ProductResource extends Resource
                             ->schema([
                                 // Category
                                 Select::make('category_id')
-                                    ->label('Categories')
-                                    ->multiple()
-                                    ->options(Category::pluck('name', 'id')->toArray())
-                                    ->searchable()
-                                    ->preload()
-                                    ->required(),
+                                ->label('Categories')
+                                ->multiple()
+                                ->options(function () {
+                                return Category::with('parent')
+                                ->whereNotNull('parent_id')
+                                ->get()
+                                ->mapWithKeys(function ($category) {
+                                return [
+                                $category->id => $category->name . ' (' . $category->parent->name . ')',
+                                ];
+                                })
+                                ->toArray();
+                                })
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+
 
                                 // Title
                                 Forms\Components\TextInput::make('name')
