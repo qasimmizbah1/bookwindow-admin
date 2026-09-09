@@ -306,12 +306,27 @@ class GlobalSettingResource extends Resource
     }
 
     /**
+     * Resolve record for edit route. Auto-creates record #1 if the table is currently empty.
+     */
+    public static function resolveRecordRouteBinding(int | string $key): ?\Illuminate\Database\Eloquent\Model
+    {
+        return GlobalSetting::firstOrCreate(
+            ['id' => $key],
+            [
+                'site_name' => 'Bookwindow',
+                'site_tagline' => "India's Trusted Online Bookstore",
+                'footer_copyright' => '© ' . date('Y') . ' Bookwindow. All rights reserved.',
+            ]
+        );
+    }
+
+    /**
      * Direct Navigation: Clicking 'Global Settings' opens the Edit page directly.
      */
     public static function getNavigationUrl(): string
     {
-        $recordId = GlobalSetting::query()->first()?->id ?? 1;
+        $record = GlobalSetting::current();
 
-        return static::getUrl('edit', ['record' => $recordId]);
+        return static::getUrl('edit', ['record' => $record->id]);
     }
 }

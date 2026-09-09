@@ -50,6 +50,15 @@ return new class extends Migration
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
         });
+
+        DB::table('global_settings')->insertOrIgnore([
+            'id' => 1,
+            'site_name' => 'Bookwindow',
+            'site_tagline' => "India's Trusted Online Bookstore",
+            'footer_copyright' => '© ' . date('Y') . ' Bookwindow. All rights reserved.',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     /**
