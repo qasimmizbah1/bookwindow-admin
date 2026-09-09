@@ -55,9 +55,11 @@ class GlobalSetting extends Model
             return null;
         }
 
-        return str_starts_with($this->site_logo, 'http')
-            ? $this->site_logo
-            : asset('storage/' . $this->site_logo);
+        if (str_starts_with($this->site_logo, 'http')) {
+            return $this->site_logo;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->site_logo);
     }
 
     public function getSiteLogoDarkUrlAttribute(): ?string
@@ -66,9 +68,11 @@ class GlobalSetting extends Model
             return null;
         }
 
-        return str_starts_with($this->site_logo_dark, 'http')
-            ? $this->site_logo_dark
-            : asset('storage/' . $this->site_logo_dark);
+        if (str_starts_with($this->site_logo_dark, 'http')) {
+            return $this->site_logo_dark;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->site_logo_dark);
     }
 
     public function getSiteFaviconUrlAttribute(): ?string
@@ -77,9 +81,11 @@ class GlobalSetting extends Model
             return null;
         }
 
-        return str_starts_with($this->site_favicon, 'http')
-            ? $this->site_favicon
-            : asset('storage/' . $this->site_favicon);
+        if (str_starts_with($this->site_favicon, 'http')) {
+            return $this->site_favicon;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->site_favicon);
     }
 
     public function updatedBy()

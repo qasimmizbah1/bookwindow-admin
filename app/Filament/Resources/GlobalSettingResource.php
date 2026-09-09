@@ -95,6 +95,7 @@ class GlobalSettingResource extends Resource
                                             ->label('Primary Logo (Header)')
                                             ->image()
                                             ->imageEditor()
+                                            ->disk('public')
                                             ->directory('settings')
                                             ->visibility('public')
                                             ->helperText('Recommended: Transparent PNG or SVG (approx. 250×60 px).'),
@@ -103,6 +104,7 @@ class GlobalSettingResource extends Resource
                                             ->label('Dark / Alternative Logo (Footer)')
                                             ->image()
                                             ->imageEditor()
+                                            ->disk('public')
                                             ->directory('settings')
                                             ->visibility('public')
                                             ->helperText('Used on dark footers or dark backgrounds.'),
@@ -115,6 +117,7 @@ class GlobalSettingResource extends Resource
                                                 'image/png',
                                                 'image/svg+xml',
                                             ])
+                                            ->disk('public')
                                             ->directory('settings')
                                             ->visibility('public')
                                             ->helperText('Square icon displayed in browser tabs (.ico, .png, or .svg).'),
