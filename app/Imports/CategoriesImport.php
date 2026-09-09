@@ -25,7 +25,7 @@ class CategoriesImport implements ToModel, WithHeadingRow
             'parent_id' => $row['parent_id'] ?? null,
             'is_visible'=> (int)$row['status'] ?? (int)0,
             'description' => $row['description'] ?? null,
-            'meta_tag_title' => $row['meta_title'] ?? null,
+            'meta_tag_title' => !empty($row['meta_title']) ? mb_substr((string) $row['meta_title'], 0, 100) : null,
             'meta_tag_description' => $row['meta_description'] ?? null,
             'meta_tag_keywords' => $row['meta_keyword'] ?? null,
             

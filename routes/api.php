@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\SitemapController;
 use App\Http\Controllers\Api\VendorRegistrationController;
+use App\Http\Controllers\Api\GlobalSettingController;
 
 //Basic API
 
@@ -122,6 +123,7 @@ Route::get('news/{slug}', [NewsController::class, 'newsBySlug']);
 //Home Page
 Route::get('/home-page', [HomePageController::class, 'index']);
 Route::get('/contact-page', [ContactPageController::class, 'index']);
+Route::get('/global-settings', [GlobalSettingController::class, 'index']);
 
 //Conatct Form
 Route::post('/contact-form', [ContactFormController::class, 'send']);

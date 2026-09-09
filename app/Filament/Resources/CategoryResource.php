@@ -155,7 +155,14 @@ class CategoryResource extends Resource
                 ->schema([
                     Forms\Components\Section::make(heading:'SEO')
                         ->schema([
-                            Forms\Components\TextInput::make('meta_tag_title'),
+                            Forms\Components\TextInput::make('meta_tag_title')
+                                ->label('Meta Tag Title')
+                                ->maxLength(100)
+                                ->live(onBlur: true)
+                                ->validationMessages([
+                                    'max' => 'The meta tag title cannot exceed 100 characters.',
+                                ])
+                                ->helperText('Maximum 100 characters allowed.'),
                             Forms\Components\MarkdownEditor::make('meta_tag_description'),
                             Forms\Components\MarkdownEditor::make('meta_tag_keywords'),
                             
