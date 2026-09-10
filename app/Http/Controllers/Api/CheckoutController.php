@@ -23,6 +23,7 @@ use App\Mail\VendorOrderNotification;
 use App\Models\Vendor;
 use App\Services\RazorpayService;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 
 class CheckoutController extends Controller
@@ -445,7 +446,7 @@ class CheckoutController extends Controller
     public function getAvailableCoupons(Request $request)
     {
         try {
-            $coupons = DB::table('coupons')
+            $query = DB::table('coupons')
                 ->where('is_active', true)
                 ->where(function ($query) {
                     $query->where('valid_from', '<=', now())
@@ -454,12 +455,17 @@ class CheckoutController extends Controller
                 ->where(function ($query) {
                     $query->where('valid_to', '>=', now())
                         ->orWhereNull('valid_to');
-                })
-                ->where(function ($query) {
-                    $query->whereNull('usage_limit')
+                });
+
+            // Only check usage_limit if column exists
+            if (Schema::hasColumn('coupons', 'usage_limit') && Schema::hasColumn('coupons', 'used_count')) {
+                $query->where(function ($q) {
+                    $q->whereNull('usage_limit')
                         ->orWhereRaw('used_count < usage_limit');
-                })
-                ->select([
+                });
+            }
+
+            $coupons = $query->select([
                     'id',
                     'code',
                     'type',
@@ -482,6 +488,7 @@ class CheckoutController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Unable to fetch coupons',
+                'error' => $e->getMessage(),
                 'coupons' => []
             ], 500);
         }
