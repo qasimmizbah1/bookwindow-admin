@@ -442,6 +442,51 @@ class CheckoutController extends Controller
             
     }
 
+    public function getAvailableCoupons(Request $request)
+    {
+        try {
+            $coupons = DB::table('coupons')
+                ->where('is_active', true)
+                ->where(function ($query) {
+                    $query->where('valid_from', '<=', now())
+                        ->orWhereNull('valid_from');
+                })
+                ->where(function ($query) {
+                    $query->where('valid_to', '>=', now())
+                        ->orWhereNull('valid_to');
+                })
+                ->where(function ($query) {
+                    $query->whereNull('usage_limit')
+                        ->orWhereRaw('used_count < usage_limit');
+                })
+                ->select([
+                    'id',
+                    'code',
+                    'type',
+                    'value',
+                    'category_id',
+                    'min_cart_amount',
+                    'max_cart_amount',
+                    'valid_from',
+                    'valid_to'
+                ])
+                ->orderBy('min_cart_amount', 'asc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'coupons' => $coupons
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching coupons: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to fetch coupons',
+                'coupons' => []
+            ], 500);
+        }
+    }
+
         //Cancel Payment
         public function handlePaymentCancel(Request $request)
         {

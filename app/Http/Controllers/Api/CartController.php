@@ -170,6 +170,7 @@ protected function getCartData()
             'products.sub_category_id as sub_category_id',
             'products.slug as product_slug',
             'products.price as product_price',
+            'products.mrp as product_mrp',
             'cart_items.quantity',
             'cart_items.image',
             'cart_items.product_weight',

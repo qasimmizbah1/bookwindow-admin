@@ -61,6 +61,7 @@ Route::post('/checkout', [CheckoutController::class, 'process']);
 Route::post('/razorpay/callback', [CheckoutController::class, 'razorpayCallback'])->name('razorpay.callback');
 Route::post('/razorpay/cancel', [CheckoutController::class, 'handlePaymentCancel'])->name('razorpay.cancel');;
 Route::post('/coupon/{coupon_code}', [CheckoutController::class, 'showCouponCode']);
+Route::get('/coupons', [CheckoutController::class, 'getAvailableCoupons']);
 
 });
 
