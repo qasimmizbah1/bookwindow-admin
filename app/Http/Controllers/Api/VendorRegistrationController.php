@@ -44,7 +44,7 @@ class VendorRegistrationController extends Controller
             'ifsc_code'             => ['required', 'string', 'regex:/^[A-Z]{4}0[A-Z0-9]{6}$/'],
             'upi_id'                => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z0-9.\-_]{2,64}@[a-zA-Z]{2,32}$/'],
         ], [
-            'support_phone.regex'        => 'Support phone number must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
+            'support_phone.regex'        => 'Support phone number must be a valid 10-digit mobile number.',
             'city.regex'                 => 'City name must contain only letters and spaces (no special characters).',
             'state.regex'                => 'State name must contain only letters and spaces (no special characters).',
             'pincode.digits'             => 'Pincode must be exactly 6 digits.',

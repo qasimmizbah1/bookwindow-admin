@@ -26,14 +26,26 @@ class AuthController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:customers',
+            'phone' => ['required', 'string', 'regex:/^(\+91[\-\s]?)?[0]?[6-9]\d{9}$/'],
             'password' => 'required|string|min:8',
+        ], [
+            'phone.required' => 'Mobile number is required.',
+            'phone.regex' => 'Please enter a valid 10-digit mobile number.',
         ]);
+
+        $cleanPhone = preg_replace('/\D/', '', (string)$request->phone);
+        if (str_starts_with($cleanPhone, '91') && strlen($cleanPhone) > 10) {
+            $cleanPhone = substr($cleanPhone, 2);
+        } elseif (str_starts_with($cleanPhone, '0') && strlen($cleanPhone) > 10) {
+            $cleanPhone = substr($cleanPhone, 1);
+        }
 
         $customer = Customer::create([
             'first_name' => $validated['first_name'],
             'last_name' => $validated['last_name'],
             'email' => $validated['email'],
-            'phone' => $request['phone'],
+            'phone' => $cleanPhone,
+            'country' => 'India',
             // 'city' => $request['city'],
             // 'address' => $request['address'],
             // 'zip_code' => $request['zip_code'],
@@ -211,7 +223,20 @@ class AuthController extends Controller
                 $validated = $request->validate([
                     'first_name' => 'required|string|max:255',
                     'last_name' => 'required|string|max:255',
+                    'phone' => ['sometimes', 'nullable', 'regex:/^(\+91[\-\s]?)?[0]?[6-9]\d{9}$/'],
+                ], [
+                    'phone.regex' => 'Please enter a valid 10-digit mobile number.',
                 ]);
+
+                $cleanPhone = null;
+                if ($request->filled('phone')) {
+                    $cleanPhone = preg_replace('/\D/', '', (string)$request->phone);
+                    if (str_starts_with($cleanPhone, '91') && strlen($cleanPhone) > 10) {
+                        $cleanPhone = substr($cleanPhone, 2);
+                    } elseif (str_starts_with($cleanPhone, '0') && strlen($cleanPhone) > 10) {
+                        $cleanPhone = substr($cleanPhone, 1);
+                    }
+                }
 
                     // Find by email
                     $customer = Customer::where('email', $request['email'])->first();
@@ -223,14 +248,14 @@ class AuthController extends Controller
                     $customer->update([
                     'first_name' => $validated['first_name'],
                     'last_name' => $validated['last_name'],
-                    'phone' => $request['phone'],
+                    'phone' => $cleanPhone ?? $customer->phone,
                     'city' => $request['city'],
                     'address' => $request['address'],
                     'address_2' => $request['address_2'],
                     'zip_code' => $request['zip_code'],
                     'state' => $request['state'],
                     'date_of_birth' => $request['date_of_birth'],
-                    'country' => $request['country'],
+                    'country' => 'India',
                     ]);
                     }
 

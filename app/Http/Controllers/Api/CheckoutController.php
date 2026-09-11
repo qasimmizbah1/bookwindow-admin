@@ -43,13 +43,33 @@ class CheckoutController extends Controller
             'session_id' => 'required_if:is_guest,true|string|nullable',
             'first_name' => 'required|string',
             'last_name' => 'required|string',
+            'phone' => ['required', 'string', 'regex:/^(\+91[\-\s]?)?[0]?[6-9]\d{9}$/'],
             'shipping_method' => 'required|string',
             'address' => 'required|string',
             'address_2' => 'string|nullable',
+            'zip_code' => ['required', 'regex:/^\d{6}$/'],
             'coupon_code' => 'nullable|string',
             'email' => 'required_if:is_guest,true|email|nullable',
             'is_guest' => 'sometimes|boolean',
+        ], [
+            'phone.required' => 'Mobile number is required.',
+            'phone.regex' => 'Please enter a valid 10-digit mobile number.',
+            'zip_code.required' => 'PIN code is required.',
+            'zip_code.regex' => 'Please enter a valid 6-digit PIN code.',
         ]);
+
+        $cleanPhone = preg_replace('/\D/', '', (string)$request->phone);
+        if (str_starts_with($cleanPhone, '91') && strlen($cleanPhone) > 10) {
+            $cleanPhone = substr($cleanPhone, 2);
+        } elseif (str_starts_with($cleanPhone, '0') && strlen($cleanPhone) > 10) {
+            $cleanPhone = substr($cleanPhone, 1);
+        }
+
+        if (strlen($cleanPhone) !== 10 || !preg_match('/^[6-9]\d{9}$/', $cleanPhone)) {
+            return response()->json([
+                'message' => 'Please provide a valid 10-digit mobile number.'
+            ], 422);
+        }
 
         // Get cart based on user or provided session ID
         $cart = $this->getCart($request);
@@ -136,7 +156,7 @@ class CheckoutController extends Controller
         }
         $discountAmount = $request->discount_amount ?? 0;
         $totalAmount = $subtotal + $shippingAmount - $discountAmount;
-        $user = $this->getOrCreateUser($request);
+        $user = $this->getOrCreateUser($request, $cleanPhone);
 
         $order = Order::with('items')
         ->latest()
@@ -163,15 +183,13 @@ class CheckoutController extends Controller
             'address' => $request->address,
             'coupon_code' => $request->coupon_code,
             'status' => 'payment_pending',
-            'customer_phone'=> $request->phone,
+            'customer_phone'=> $cleanPhone,
             'first_name'=> $request->first_name,
             'last_name'=> $request->last_name,
             'zip_code' => $request->zip_code,
             'city' => $request->city,
             'state' => $request->state,
-            'country' => $request->country,
-            
-            
+            'country' => 'India',
         ]);
 
         $order->update([
@@ -220,7 +238,7 @@ class CheckoutController extends Controller
                     'amount' => $totalAmount * 100,
                     'name' => $request->first_name . ' ' . $request->last_name,
                     'email' => $request->email,
-                    'contact' => $request->phone ?? '',
+                    'contact' => $cleanPhone,
                     'keep_cart' => true, // Tell frontend to keep cart
                 ]);
             } 
@@ -249,13 +267,13 @@ class CheckoutController extends Controller
                 'address' => $request->address,
                 'coupon_code' => $request->coupon_code,
                 'status' => 'pending',
-                'customer_phone'=> $request->phone,
+                'customer_phone'=> $cleanPhone,
                 'first_name'=> $request->first_name,
                 'last_name'=> $request->last_name,
                 'zip_code' => $request->zip_code,
                 'city' => $request->city,
                 'state' => $request->state,
-                'country' => $request->country,
+                'country' => 'India',
                 'delivery_amount'=>$request->delivery_amount,
             ]);
 
@@ -362,13 +380,11 @@ class CheckoutController extends Controller
         }
     }
 
-    protected function getOrCreateUser(Request $request)
+    protected function getOrCreateUser(Request $request, $cleanPhone = null)
     {
         if (Auth::check()) {
             return Auth::customer();
         }
-
-        
 
         if ($request->email) {
             // For guest checkout, find or create a user without password
@@ -387,17 +403,16 @@ class CheckoutController extends Controller
                 [
                     'first_name' => $request->first_name,
                     'last_name' => $request->last_name,
-                    'phone'=> $request->phone,
+                    'phone'=> $cleanPhone ?? $request->phone,
                     'password' =>  $pass,
                     'address' => $request->address,
                     'address_2' => $request->address_2,
                     'zip_code' => $request->zip_code,
                     'city' => $request->city,
                     'state' => $request->state,
+                    'country' => 'India',
                 ]
             );
-
-            
         }
 
         return null;
