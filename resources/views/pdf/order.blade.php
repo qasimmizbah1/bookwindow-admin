@@ -159,9 +159,9 @@ table {
                     <span class="bold" style="color: #666; font-size: 11px;">(Fulfilled via BookWindow Platform)</span>
                 @else
                     <span class="bold">BOOKWINDOW</span><br>
-                    <span class="bold">Store:</span> Shop No. 8, Maharani Garden road near by Hotel<br>
-                    Dwarika Palace, Mangyawas, Jaipur, 302020, Rajasthan<br>
-                    <span class="bold">Code:</span> 302020<br>
+                    <span class="bold">Store:</span> Pinkcity², 2nd floor, 207 nearj joshi marg, Kalwar Rd,<br>
+                    Jhotwara, Jaipur, Rajasthan<br>
+                    <span class="bold">Code:</span> 302012<br>
                     <span class="bold">Phone No:</span> +91 9468 888227<br>
                     <span class="bold">E-mail ID:</span> info@bookwindow.in<br>
                     <span class="bold">Website:</span> www.bookwindow.in
