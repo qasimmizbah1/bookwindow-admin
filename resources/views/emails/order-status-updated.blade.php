@@ -188,11 +188,18 @@
                     </tr>
                     @if($statusKey === 'order_shipped' && !empty($order->tracking_id))
                     <tr>
-                        <td align="left" style="font-size: 13px; color: #64748b;padding: 10px 0px;">
+                        <td colspan="2" align="left" style="font-size: 13px; color: #64748b;padding: 10px 0px;">
                             <strong>Tracking ID:</strong> {{ $order->tracking_id }}
                         </td>
                     </tr>
-                     @endif
+                    @endif
+                    @if(in_array($statusKey, ['cancelled', 'declined']) && !empty($order->cancellation_reason))
+                    <tr>
+                        <td colspan="2" align="left" style="font-size: 13px; color: #b91c1c; padding-top: 10px; border-top: 1px dashed #fca5a5;">
+                            <strong>Reason for Cancellation:</strong> {{ $order->cancellation_reason }}
+                        </td>
+                    </tr>
+                    @endif
                 </table>
             </div>
 

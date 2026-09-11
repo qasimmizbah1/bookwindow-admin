@@ -73,6 +73,7 @@ Route::middleware('auth:customer')->group(function () {
 Route::post('/passwordchange', [AuthController::class, 'passwordchange']);
 
 Route::get('user_order/{user_id}', [OrderApiController::class, 'userOrders']);
+Route::post('/cancel-order', [OrderApiController::class, 'cancelOrder']);
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::get('/user', [AuthController::class, 'user']);
 Route::post('/refresh', [AuthController::class, 'refresh']);

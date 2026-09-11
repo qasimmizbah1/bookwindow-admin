@@ -26,4 +26,14 @@ class EditOrder extends EditRecord
                 ->url(fn () => "javascript:window.open('" . route('orders.print', $this->record->id) . "', 'Print', 'width=800,height=600'); void(0);"),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (in_array($data['status'] ?? '', ['cancelled', 'declined'])) {
+            if (empty($this->record->cancelled_by)) {
+                $data['cancelled_by'] = 'admin';
+            }
+        }
+        return $data;
+    }
 }

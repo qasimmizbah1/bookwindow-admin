@@ -183,21 +183,56 @@ class OrderResource extends Resource
                                                         "completed"=>"Order Completed/Delivered",
                                                         "cancelled"=>"Order Cancelled",
                                                         "declined"=>"Order Declined",
-                                                      
-                                                        
-
                                                     ])
                                                     ->required()
-                                                     ->live()
+                                                    ->live()
                                                     ->native(false),
 
+                                                Placeholder::make('cancelled_by_display')
+                                                    ->label('Cancelled By')
+                                                    ->visible(fn ($record, Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']) && !empty($record?->cancelled_by))
+                                                    ->content(function ($record) {
+                                                        return match($record?->cancelled_by) {
+                                                            'customer' => 'Customer (From User Account)',
+                                                            'admin' => 'Admin / Store Staff',
+                                                            default => ucfirst($record?->cancelled_by ?? 'N/A'),
+                                                        };
+                                                    }),
 
-                                                    TextInput::make('tracking_id')
+                                                Select::make('cancellation_reason_preset')
+                                                    ->label('Cancellation Reason Preset')
+                                                    ->options([
+                                                        'Customer requested cancellation' => 'Customer requested cancellation',
+                                                        'Product out of stock' => 'Product out of stock',
+                                                        'Customer unreachable on phone' => 'Customer unreachable on phone',
+                                                        'Incorrect or incomplete delivery address' => 'Incorrect or incomplete delivery address',
+                                                        'Payment issue / Unpaid COD' => 'Payment issue / Unpaid COD',
+                                                        'Duplicate order placed by mistake' => 'Duplicate order placed by mistake',
+                                                        'Other reason' => 'Other reason (Specify in remarks below)',
+                                                    ])
+                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                                    ->live()
+                                                    ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                                        if ($state && $state !== 'Other reason') {
+                                                            $set('cancellation_reason', $state);
+                                                        }
+                                                    })
+                                                    ->dehydrated(false),
+
+                                                Textarea::make('cancellation_reason')
+                                                    ->label('Cancellation Reason / Remarks')
+                                                    ->placeholder('Enter detailed reason or remark for order cancellation...')
+                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                                    ->required(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                                    ->rows(2)
+                                                    ->columnSpanFull(),
+
+                                                TextInput::make('tracking_id')
                                                     ->label('Tracking ID')
                                                     ->live()
                                                     ->visible(fn (Forms\Get $get) => $get('status') === 'order_shipped')
                                                     ->required(fn (Forms\Get $get) => $get('status') === 'order_shipped')
-                                                     ->columnSpanFull(),
+                                                    ->columnSpanFull(),
 
                                 
                                                 
@@ -302,12 +337,23 @@ class OrderResource extends Resource
                                                     }),
                                                 
                                                 Placeholder::make('notes')
-                                                    ->label('Order Notes')
+                                                    ->label('Order Notes (Customer)')
                                                     ->content(function ($record) {
                                                         return $record->notes ?? 'No notes';
                                                     })
                                                     ->columnSpanFull(),
                                             ]),
+                                    ]),
+
+                                // Admin Remarks & Internal Comments Section
+                                Section::make('Admin Remarks & Internal Comments')
+                                    ->description('Internal staff comments and order remarks (not visible to customer).')
+                                    ->schema([
+                                        Textarea::make('admin_remark')
+                                            ->label('Order Remark / Comment')
+                                            ->placeholder('Add internal staff notes or comments about this order...')
+                                            ->rows(3)
+                                            ->columnSpanFull(),
                                     ]),
                             ]),
                         
@@ -512,7 +558,28 @@ class OrderResource extends Resource
                         'heroicon-o-check-circle' => 'completed',
                         'heroicon-o-x-circle' => 'declined',
                         'heroicon-o-x-mark' => 'cancelled',
-                    ]),
+                    ])
+                    ->description(function ($record) {
+                        if (in_array($record->status, ['cancelled', 'declined']) && !empty($record->cancellation_reason)) {
+                            $prefix = $record->cancelled_by === 'customer' ? 'By User: ' : ($record->cancelled_by === 'admin' ? 'By Admin: ' : 'Reason: ');
+                            return $prefix . Str::limit($record->cancellation_reason, 35);
+                        }
+                        return null;
+                    })
+                    ->tooltip(function ($record) {
+                        if (in_array($record->status, ['cancelled', 'declined']) && !empty($record->cancellation_reason)) {
+                            $prefix = $record->cancelled_by === 'customer' ? 'Cancelled by Customer: ' : 'Cancelled by Admin: ';
+                            return $prefix . $record->cancellation_reason;
+                        }
+                        return null;
+                    }),
+
+                Tables\Columns\TextColumn::make('admin_remark')
+                    ->label('Admin Remark')
+                    ->limit(25)
+                    ->tooltip(fn ($record) => $record->admin_remark)
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 
                 Tables\Columns\TextColumn::make('payment_method')
                     ->label('Payment')
@@ -672,6 +739,14 @@ class OrderResource extends Resource
                     Tables\Actions\Action::make('updateStatus')
                         ->label('Update Status')
                         ->icon('heroicon-o-arrow-path')
+                        ->mountUsing(function (Forms\ComponentContainer $form, $record) {
+                            $form->fill([
+                                'status' => $record->status,
+                                'tracking_id' => $record->tracking_id,
+                                'cancellation_reason' => $record->cancellation_reason,
+                                'admin_remark' => $record->admin_remark,
+                            ]);
+                        })
                         ->form([
                             Select::make('status')
                                 ->options([
@@ -683,18 +758,94 @@ class OrderResource extends Resource
                                     "declined"=>"Declined",
                                     "cancelled"=>"Cancelled",
                                 ])
-                                ->required(),
+                                ->required()
+                                ->live(),
+
                             TextInput::make('tracking_id')
                                 ->label('Tracking / Courier ID')
                                 ->placeholder('e.g. DTDC12345678')
                                 ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
+
+                            Select::make('cancellation_reason_preset')
+                                ->label('Cancellation Reason Preset')
+                                ->options([
+                                    'Customer requested cancellation' => 'Customer requested cancellation',
+                                    'Product out of stock' => 'Product out of stock',
+                                    'Customer unreachable on phone' => 'Customer unreachable on phone',
+                                    'Incorrect or incomplete delivery address' => 'Incorrect or incomplete delivery address',
+                                    'Payment issue / Unpaid COD' => 'Payment issue / Unpaid COD',
+                                    'Duplicate order placed by mistake' => 'Duplicate order placed by mistake',
+                                    'Other reason' => 'Other reason (Specify in remarks below)',
+                                ])
+                                ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                    if ($state && $state !== 'Other reason') {
+                                        $set('cancellation_reason', $state);
+                                    }
+                                })
+                                ->dehydrated(false),
+
+                            Textarea::make('cancellation_reason')
+                                ->label('Cancellation Reason / Remark')
+                                ->placeholder('Enter reason why order is cancelled...')
+                                ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                ->required(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                ->rows(2),
+
+                            Textarea::make('admin_remark')
+                                ->label('Admin Remark / Note (Optional)')
+                                ->placeholder('Add internal staff note...')
+                                ->rows(2),
                         ])
                         ->action(function ($record, array $data) {
                             $updateData = ['status' => $data['status']];
                             if (!empty($data['tracking_id'])) {
                                 $updateData['tracking_id'] = $data['tracking_id'];
                             }
+                            if (in_array($data['status'], ['cancelled', 'declined'])) {
+                                $updateData['cancellation_reason'] = $data['cancellation_reason'] ?? null;
+                                if (empty($record->cancelled_by)) {
+                                    $updateData['cancelled_by'] = 'admin';
+                                }
+                            }
+                            if (isset($data['admin_remark'])) {
+                                $updateData['admin_remark'] = $data['admin_remark'];
+                            }
                             $record->update($updateData);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Order status updated successfully')
+                                ->success()
+                                ->send();
+                        }),
+
+                    // Quick action to view/add remark
+                    Tables\Actions\Action::make('addRemark')
+                        ->label('Remark')
+                        ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                        ->color('gray')
+                        ->mountUsing(function (Forms\ComponentContainer $form, $record) {
+                            $form->fill([
+                                'admin_remark' => $record->admin_remark,
+                            ]);
+                        })
+                        ->form([
+                            Textarea::make('admin_remark')
+                                ->label('Order Remark / Internal Comment')
+                                ->placeholder('Enter internal notes or comments for this order...')
+                                ->rows(4)
+                                ->required(),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $record->update([
+                                'admin_remark' => $data['admin_remark'],
+                            ]);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Order remark updated successfully')
+                                ->success()
+                                ->send();
                         }),
                     
                     // Custom action to update payment status (Admin only)

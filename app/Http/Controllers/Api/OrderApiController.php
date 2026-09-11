@@ -85,5 +85,65 @@ class OrderApiController extends Controller
             ]);
             }
 
+    public function cancelOrder(Request $request)
+    {
+        $request->validate([
+            'order_number' => 'required',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $user = auth('customer')->user();
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized. Please login to continue.'
+            ], 401);
+        }
+
+        $order = Order::where('order_number', $request->order_number)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Order not found.'
+            ], 404);
+        }
+
+        $currentStatus = strtolower(trim($order->status));
+
+        // Shipping Guard: Cannot cancel if shipped, completed, or delivered
+        if (in_array($currentStatus, ['order_shipped', 'shipped', 'completed', 'delivered'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Order cannot be cancelled because it has already been shipped or completed.'
+            ], 422);
+        }
+
+        if (in_array($currentStatus, ['cancelled', 'declined'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'This order is already ' . $currentStatus . '.'
+            ], 422);
+        }
+
+        // Update order status
+        $order->status = 'cancelled';
+        $order->cancelled_by = 'customer';
+        $order->cancellation_reason = $request->reason;
+        $order->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Order cancelled successfully.',
+            'data' => [
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'cancelled_by' => $order->cancelled_by,
+                'cancellation_reason' => $order->cancellation_reason,
+            ]
+        ]);
+    }
 
 }
