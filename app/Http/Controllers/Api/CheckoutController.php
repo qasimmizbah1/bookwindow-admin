@@ -221,33 +221,38 @@ class CheckoutController extends Controller
         }
 
         
-            $razorpayService = new RazorpayService();
-            $razorpayOrder = $razorpayService->createOrder($order, (int)$order->order_number);
-
-            $order->update([
-            'razorpay_order_id' => $razorpayOrder->id,
-            'payment_status' => 'created'
-            ]);
             try {
+                $razorpayService = new RazorpayService();
+                $razorpayOrder = $razorpayService->createOrder($order, $order->order_number);
+
+                $order->update([
+                    'razorpay_order_id' => $razorpayOrder->id,
+                    'payment_status' => 'created'
+                ]);
+
                 return response()->json([
                     'message' => 'Please complete payment',
                     'order' => $order,
                     'order_number' => $order->order_number,
                     'razorpay_order_id' => $razorpayOrder->id,
-                    'razorpay_key' => env('RAZORPAY_KEY'),
+                    'razorpay_key' => config('services.razorpay.key') ?: env('RAZORPAY_KEY'),
                     'amount' => $totalAmount * 100,
                     'name' => $request->first_name . ' ' . $request->last_name,
                     'email' => $request->email,
                     'contact' => $cleanPhone,
                     'keep_cart' => true, // Tell frontend to keep cart
                 ]);
-            } 
-            catch (\Exception $e) {
-                    // Log the error for debugging
-                    \Log::error('Razorpay Order Creation Error: '.$e->getMessage());
-                    throw $e;
-            } 
-            } else 
+            } catch (\Exception $e) {
+                \Log::error('Razorpay Order Creation Error: ' . $e->getMessage(), [
+                    'order_id' => $order->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                return response()->json([
+                    'error' => 'Payment Gateway Error: ' . $e->getMessage() . '. Please verify Razorpay credentials or try Cash on Delivery.',
+                    'message' => 'Payment Gateway Error: ' . $e->getMessage() . '. Please verify Razorpay credentials or try Cash on Delivery.'
+                ], 500);
+            }
+        } else 
             {
             $totalAmount = $totalAmount + $request->delivery_amount; 
 

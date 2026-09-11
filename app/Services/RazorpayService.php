@@ -11,10 +11,10 @@ class RazorpayService
 
     public function __construct()
     {
-        $this->razorpay = new Api(
-            env('RAZORPAY_KEY'),
-            env('RAZORPAY_SECRET')
-        );
+        $key = config('services.razorpay.key') ?: env('RAZORPAY_KEY');
+        $secret = config('services.razorpay.secret') ?: env('RAZORPAY_SECRET');
+
+        $this->razorpay = new Api($key, $secret);
     }
 
     public function createOrder(Order $order, $receiptId)
