@@ -243,10 +243,10 @@ table {
         <td class="label">Shipping Cost (Weight):</td>
         <td class="value">₹{{ number_format($order->shipping_amount, 2) }}</td>
     </tr>
-    @if(strtolower($order->payment_method) == 'cod' || strtolower($order->payment_method) == 'cash on delivery')
+    @if(strtolower($order->payment_method ?? '') == 'cod' || strtolower($order->payment_method ?? '') == 'cash on delivery' || ($order->delivery_amount ?? 0) > 0)
     <tr>
-        <td class="label">Cash On Delivery:</td>
-        <td class="value">₹0.00</td>
+        <td class="label">COD:</td>
+        <td class="value">₹{{ number_format($order->delivery_amount ?? 0, 2) }}</td>
     </tr>
     @endif
     <tr>

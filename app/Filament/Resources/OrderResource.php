@@ -270,7 +270,8 @@ class OrderResource extends Resource
                                                     }),
                                                 
                                                 Placeholder::make('delivery_amount')
-                                                    ->label('Delivery Amount')
+                                                    ->label('COD')
+                                                    ->visible(fn ($record) => $record && (strtolower($record->payment_method ?? '') === 'cod' || ($record->delivery_amount ?? 0) > 0))
                                                     ->content(function ($record) {
                                                         return format_currency($record->delivery_amount ?? 0, 2);
                                                     }),
@@ -417,8 +418,16 @@ class OrderResource extends Resource
                                                             <div class="flex justify-between py-2 border-b border-gray-200">
                                                                 <span class="text-sm font-medium text-gray-600">Shipping:</span>
                                                                 <span class="text-sm font-semibold text-gray-700">' . format_currency($record->shipping_amount ?? 0, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200">
+                                                            </div>';
+
+                                                    if ($record && (strtolower($record->payment_method ?? '') === 'cod' || ($record->delivery_amount ?? 0) > 0)) {
+                                                        $html .= '<div class="flex justify-between py-2 border-b border-gray-200">
+                                                            <span class="text-sm font-medium text-gray-600">COD:</span>
+                                                            <span class="text-sm font-semibold text-gray-700">' . format_currency($record->delivery_amount ?? 0, 2) . '</span>
+                                                        </div>';
+                                                    }
+
+                                                    $html .= '<div class="flex justify-between py-2 border-b border-gray-200">
                                                                 <span class="text-sm font-medium text-gray-600">Discount:</span>
                                                                 <span class="text-sm font-semibold text-gray-700">-' . format_currency($record->discount_amount ?? 0, 2) . '</span>
                                                             </div>
