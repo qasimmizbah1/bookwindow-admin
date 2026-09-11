@@ -159,8 +159,8 @@ table {
                     <span class="bold" style="color: #666; font-size: 11px;">(Fulfilled via BookWindow Platform)</span>
                 @else
                     <span class="bold">BOOKWINDOW</span><br>
-                    <span class="bold">Store:</span> Pinkcity², 2nd floor, 207 nearj joshi marg, Kalwar Rd,<br>
-                    Jhotwara, Jaipur, Rajasthan<br>
+                    <span class="bold">Store:</span> Pinkcity², 2nd floor, 207 near joshi marg,<br>
+                    Kalwar Rd, Jhotwara, Jaipur, Rajasthan<br>
                     <span class="bold">Code:</span> 302012<br>
                     <span class="bold">Phone No:</span> +91 9468 888227<br>
                     <span class="bold">E-mail ID:</span> info@bookwindow.in<br>
