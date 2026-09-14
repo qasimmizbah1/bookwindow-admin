@@ -194,12 +194,18 @@
                         </td>
                     </tr>
 
-                    @if($statusKey === 'order_shipped' && !empty($order->tracking_id))
+                    @if($statusKey === 'order_shipped' && (!empty($order->tracking_id) || !empty($order->courier_partner)))
                     <tr>
                         <td colspan="2" style="padding-top: 12px;">
                             <div style="background-color: #ffffff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 6px; padding: 10px 14px;">
-                                <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #1e40af; letter-spacing: 0.5px;">Tracking / Courier ID</div>
-                                <div style="font-size: 13px; color: #1e3a8a; font-family: monospace; font-weight: bold; margin-top: 2px;">{{ $order->tracking_id }}</div>
+                                @if(!empty($order->courier_partner))
+                                    <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #1e40af; letter-spacing: 0.5px;">Courier Partner</div>
+                                    <div style="font-size: 13px; color: #1e3a8a; font-weight: 600; margin-top: 2px; margin-bottom: {{ !empty($order->tracking_id) ? '8px' : '0' }};">{{ $order->courier_partner }}</div>
+                                @endif
+                                @if(!empty($order->tracking_id))
+                                    <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #1e40af; letter-spacing: 0.5px;">Tracking / Consignment ID</div>
+                                    <div style="font-size: 13px; color: #1e3a8a; font-family: monospace; font-weight: bold; margin-top: 2px;">{{ $order->tracking_id }}</div>
+                                @endif
                             </div>
                         </td>
                     </tr>

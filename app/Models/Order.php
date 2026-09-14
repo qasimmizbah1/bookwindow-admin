@@ -45,8 +45,8 @@ class Order extends Model
         'city',
         'state',
         'country',
-        'tracking_id'
-        
+        'tracking_id',
+        'courier_partner',
     ];
     
 

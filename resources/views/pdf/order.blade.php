@@ -177,6 +177,8 @@ table {
         <span class="bold">Invoice Date:</span> {{ now()->format('d-m-Y') }}<br>
         <span class="bold">Order ID:</span> {{ $order->order_number }}<br>
         <span class="bold">Payment Method:</span> ₹ / {{ Str::upper($order->payment_method) }}
+        @if(!empty($order->courier_partner))<br><span class="bold">Courier Partner:</span> {{ $order->courier_partner }}@endif
+        @if(!empty($order->tracking_id))<br><span class="bold">Tracking ID:</span> {{ $order->tracking_id }}@endif
     </p>
 </div>
 

@@ -230,10 +230,16 @@ class OrderResource extends Resource
 
                                                 TextInput::make('tracking_id')
                                                     ->label('Tracking ID')
+                                                    ->placeholder('e.g. DTDC12345678, EK123456789IN')
                                                     ->live()
-                                                    ->visible(fn (Forms\Get $get) => $get('status') === 'order_shipped')
-                                                    ->required(fn (Forms\Get $get) => $get('status') === 'order_shipped')
-                                                    ->columnSpanFull(),
+                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed']))
+                                                    ->required(fn (Forms\Get $get) => $get('status') === 'order_shipped'),
+
+                                                TextInput::make('courier_partner')
+                                                    ->label('Courier Partner Name')
+                                                    ->placeholder('Enter Courier Partner Name (e.g. DTDC, India Post)')
+                                                    ->live()
+                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
 
                                 
                                                 
@@ -585,6 +591,10 @@ class OrderResource extends Resource
                                     : ($record->cancelled_by === 'payment_failed' ? 'Payment Failed: ' : 'Reason: '));
                             return $prefix . Str::limit($record->cancellation_reason, 35);
                         }
+                        if (in_array($record->status, ['order_shipped', 'Shipped', 'completed', 'Complete']) && (!empty($record->tracking_id) || !empty($record->courier_partner))) {
+                            $parts = array_filter([$record->courier_partner, $record->tracking_id]);
+                            return implode(' - ', $parts);
+                        }
                         return null;
                     })
                     ->tooltip(function ($record) {
@@ -596,8 +606,23 @@ class OrderResource extends Resource
                                     : ($record->cancelled_by === 'payment_failed' ? 'Payment Failed / Cancelled: ' : 'Reason: '));
                             return $prefix . $record->cancellation_reason;
                         }
+                        if (in_array($record->status, ['order_shipped', 'Shipped', 'completed', 'Complete']) && (!empty($record->tracking_id) || !empty($record->courier_partner))) {
+                            return 'Courier: ' . ($record->courier_partner ?? 'N/A') . ' | Tracking: ' . ($record->tracking_id ?? 'N/A');
+                        }
                         return null;
                     }),
+
+                Tables\Columns\TextColumn::make('courier_partner')
+                    ->label('Courier')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('tracking_id')
+                    ->label('Tracking ID')
+                    ->searchable()
+                    ->copyable()
+                    ->copyMessage('Tracking ID copied')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('admin_remark')
                     ->label('Admin Remark')
@@ -768,6 +793,7 @@ class OrderResource extends Resource
                             $form->fill([
                                 'status' => $record->status,
                                 'tracking_id' => $record->tracking_id,
+                                'courier_partner' => $record->courier_partner,
                                 'cancellation_reason' => $record->cancellation_reason,
                                 'admin_remark' => $record->admin_remark,
                             ]);
@@ -786,9 +812,18 @@ class OrderResource extends Resource
                                 ->required()
                                 ->live(),
 
-                            TextInput::make('tracking_id')
-                                ->label('Tracking / Courier ID')
-                                ->placeholder('e.g. DTDC12345678')
+                            Forms\Components\Grid::make(2)
+                                ->schema([
+                                    TextInput::make('tracking_id')
+                                        ->label('Tracking ID')
+                                        ->placeholder('e.g. DTDC12345678')
+                                        ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
+
+                                    TextInput::make('courier_partner')
+                                        ->label('Courier Partner Name')
+                                        ->placeholder('Enter Courier Partner Name')
+                                        ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
+                                ])
                                 ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
 
                             Select::make('cancellation_reason_preset')
@@ -825,8 +860,11 @@ class OrderResource extends Resource
                         ])
                         ->action(function ($record, array $data) {
                             $updateData = ['status' => $data['status']];
-                            if (!empty($data['tracking_id'])) {
+                            if (isset($data['tracking_id'])) {
                                 $updateData['tracking_id'] = $data['tracking_id'];
+                            }
+                            if (isset($data['courier_partner'])) {
+                                $updateData['courier_partner'] = $data['courier_partner'];
                             }
                             if (in_array($data['status'], ['cancelled', 'declined'])) {
                                 $updateData['cancellation_reason'] = $data['cancellation_reason'] ?? null;
