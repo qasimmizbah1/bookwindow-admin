@@ -190,11 +190,12 @@ class OrderResource extends Resource
 
                                                 Placeholder::make('cancelled_by_display')
                                                     ->label('Cancelled By')
-                                                    ->visible(fn ($record, Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']) && !empty($record?->cancelled_by))
+                                                    ->visible(fn ($record, Forms\Get $get) => (in_array($get('status'), ['cancelled', 'declined', 'payment_cancelled']) || str_contains((string)$get('status'), 'cancel')) && !empty($record?->cancelled_by))
                                                     ->content(function ($record) {
                                                         return match($record?->cancelled_by) {
                                                             'customer' => 'Customer (From User Account)',
                                                             'admin' => 'Admin / Store Staff',
+                                                            'payment_failed' => 'Payment Cancelled / Failed at Gateway',
                                                             default => ucfirst($record?->cancelled_by ?? 'N/A'),
                                                         };
                                                     }),
@@ -576,15 +577,23 @@ class OrderResource extends Resource
                         'heroicon-o-x-mark' => 'cancelled',
                     ])
                     ->description(function ($record) {
-                        if (in_array($record->status, ['cancelled', 'declined']) && !empty($record->cancellation_reason)) {
-                            $prefix = $record->cancelled_by === 'customer' ? 'By User: ' : ($record->cancelled_by === 'admin' ? 'By Admin: ' : 'Reason: ');
+                        if ((in_array($record->status, ['cancelled', 'declined', 'payment_cancelled']) || str_contains((string)$record->status, 'cancel')) && !empty($record->cancellation_reason)) {
+                            $prefix = $record->cancelled_by === 'customer' 
+                                ? 'By User: ' 
+                                : ($record->cancelled_by === 'admin' 
+                                    ? 'By Admin: ' 
+                                    : ($record->cancelled_by === 'payment_failed' ? 'Payment Failed: ' : 'Reason: '));
                             return $prefix . Str::limit($record->cancellation_reason, 35);
                         }
                         return null;
                     })
                     ->tooltip(function ($record) {
-                        if (in_array($record->status, ['cancelled', 'declined']) && !empty($record->cancellation_reason)) {
-                            $prefix = $record->cancelled_by === 'customer' ? 'Cancelled by Customer: ' : 'Cancelled by Admin: ';
+                        if ((in_array($record->status, ['cancelled', 'declined', 'payment_cancelled']) || str_contains((string)$record->status, 'cancel')) && !empty($record->cancellation_reason)) {
+                            $prefix = $record->cancelled_by === 'customer' 
+                                ? 'Cancelled by Customer: ' 
+                                : ($record->cancelled_by === 'admin' 
+                                    ? 'Cancelled by Admin: ' 
+                                    : ($record->cancelled_by === 'payment_failed' ? 'Payment Failed / Cancelled: ' : 'Reason: '));
                             return $prefix . $record->cancellation_reason;
                         }
                         return null;

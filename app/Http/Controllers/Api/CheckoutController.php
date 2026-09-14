@@ -530,7 +530,14 @@ class CheckoutController extends Controller
                     ->first();
 
         if ($order) {
-            $this->handleFailedPayment($order);
+            DB::transaction(function () use ($order) {
+                $order->update([
+                    'payment_status' => 'payment_cancelled',
+                    'status' => 'payment_cancelled',
+                    'cancelled_by' => 'customer',
+                    'cancellation_reason' => 'Payment cancelled by customer during checkout',
+                ]);
+            });
             return response()->json(['success' => true]);
         }
 
@@ -713,7 +720,9 @@ class CheckoutController extends Controller
             // Option 1: Mark as failed (keeps record)
             $order->update([
                 'payment_status' => 'payment_cancelled',
-                'status' => 'payment_cancelled'
+                'status' => 'payment_cancelled',
+                'cancelled_by' => 'payment_failed',
+                'cancellation_reason' => 'Payment failed or cancelled at payment gateway',
             ]);
             
             // Option 2: Or delete the order completely

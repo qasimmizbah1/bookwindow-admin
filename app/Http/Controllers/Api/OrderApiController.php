@@ -100,7 +100,14 @@ class OrderApiController extends Controller
             ], 401);
         }
 
-        $order = Order::where('order_number', $request->order_number)
+        $cleanOrderNum = trim(str_replace('OR-', '', $request->order_number));
+
+        $order = Order::where(function ($query) use ($request, $cleanOrderNum) {
+                $query->where('order_number', $request->order_number)
+                      ->orWhere('order_number', 'OR-' . $cleanOrderNum)
+                      ->orWhere('order_number', $cleanOrderNum)
+                      ->orWhere('id', $cleanOrderNum);
+            })
             ->where('user_id', $user->id)
             ->first();
 
@@ -114,17 +121,18 @@ class OrderApiController extends Controller
         $currentStatus = strtolower(trim($order->status));
 
         // Shipping Guard: Cannot cancel if shipped, completed, or delivered
-        if (in_array($currentStatus, ['order_shipped', 'shipped', 'completed', 'delivered'])) {
+        if (in_array($currentStatus, ['order_shipped', 'shipped', 'completed', 'delivered']) || str_contains($currentStatus, 'ship') || str_contains($currentStatus, 'deliver')) {
             return response()->json([
                 'status' => false,
                 'message' => 'Order cannot be cancelled because it has already been shipped or completed.'
             ], 422);
         }
 
-        if (in_array($currentStatus, ['cancelled', 'declined'])) {
+        // Already cancelled guard (including payment_cancelled, failed, declined)
+        if (in_array($currentStatus, ['cancelled', 'payment_cancelled', 'declined', 'failed']) || str_contains($currentStatus, 'cancel')) {
             return response()->json([
                 'status' => false,
-                'message' => 'This order is already ' . $currentStatus . '.'
+                'message' => 'This order is already cancelled.'
             ], 422);
         }
 
