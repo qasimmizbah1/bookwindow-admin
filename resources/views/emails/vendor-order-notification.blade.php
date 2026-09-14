@@ -217,7 +217,7 @@
             </tr>
             <tr>
                 <td class="label">Contact Phone:</td>
-                <td class="value">{{ $order->customer_phone ?? 'N/A' }}</td>
+                <td class="value">{{ $order->formatted_phone ?? $order->customer_phone ?? 'N/A' }}</td>
             </tr>
         </table>
 

@@ -84,11 +84,31 @@ class Order extends Model
     return $this->items()->where('vendor_id', $vendorId);
     }
     
-    
+    /**
+     * Normalize and format any phone number to standard +91 XXXXXXXXXX format.
+     */
+    public static function formatPhoneNumber(?string $phone): string
+    {
+        if (empty($phone)) {
+            return 'N/A';
+        }
 
+        $digits = preg_replace('/\D/', '', $phone);
+        if (str_starts_with($digits, '91') && strlen($digits) > 10) {
+            $digits = substr($digits, 2);
+        } elseif (str_starts_with($digits, '0') && strlen($digits) > 10) {
+            $digits = substr($digits, 1);
+        }
+        $digits = substr($digits, -10);
 
-  
+        return !empty($digits) ? '+91 ' . $digits : $phone;
+    }
 
-   
-
+    /**
+     * Accessor for formatted phone number with +91 prefix.
+     */
+    public function getFormattedPhoneAttribute(): string
+    {
+        return self::formatPhoneNumber($this->customer_phone);
+    }
 }

@@ -139,7 +139,7 @@ table {
                 <span class="bold">City:</span> {{ $order->city }}<br>
                 <span class="bold">State:</span> {{ $order->state }}<br>
                 <span class="bold">Pin Code:</span> {{ $order->zip_code }}<br>
-                <span class="bold">Phone:</span> {{ $order->customer_phone }}<br>
+                <span class="bold">Phone:</span> {{ $order->formatted_phone ?? $order->customer_phone }}<br>
                 <span class="bold">Email:</span> {{ $order->email }}
             </p>
         </td>

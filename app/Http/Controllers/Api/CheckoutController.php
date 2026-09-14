@@ -71,6 +71,8 @@ class CheckoutController extends Controller
             ], 422);
         }
 
+        $dbPhone = '+91' . $cleanPhone;
+
         // Get cart based on user or provided session ID
         $cart = $this->getCart($request);
         
@@ -156,7 +158,7 @@ class CheckoutController extends Controller
         }
         $discountAmount = $request->discount_amount ?? 0;
         $totalAmount = $subtotal + $shippingAmount - $discountAmount;
-        $user = $this->getOrCreateUser($request, $cleanPhone);
+        $user = $this->getOrCreateUser($request, $dbPhone);
 
         $order = Order::with('items')
         ->latest()
@@ -183,7 +185,7 @@ class CheckoutController extends Controller
             'address' => $request->address,
             'coupon_code' => $request->coupon_code,
             'status' => 'payment_pending',
-            'customer_phone'=> $cleanPhone,
+            'customer_phone'=> $dbPhone,
             'first_name'=> $request->first_name,
             'last_name'=> $request->last_name,
             'zip_code' => $request->zip_code,
@@ -272,7 +274,7 @@ class CheckoutController extends Controller
                 'address' => $request->address,
                 'coupon_code' => $request->coupon_code,
                 'status' => 'pending',
-                'customer_phone'=> $cleanPhone,
+                'customer_phone'=> $dbPhone,
                 'first_name'=> $request->first_name,
                 'last_name'=> $request->last_name,
                 'zip_code' => $request->zip_code,

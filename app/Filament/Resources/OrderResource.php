@@ -112,7 +112,7 @@ class OrderResource extends Resource
                                                 Placeholder::make('customer_phone')
                                                     ->label('Phone Number')
                                                     ->content(function ($record) {
-                                                        return $record->customer_phone ?? 'N/A';
+                                                        return $record?->formatted_phone ?? 'N/A';
                                                     }),
                                             ]),
                                     ]),
@@ -528,6 +528,22 @@ class OrderResource extends Resource
                 
                 Tables\Columns\TextColumn::make('customer_phone')
                     ->label('Phone')
+                    ->formatStateUsing(fn ($state) => Order::formatPhoneNumber($state))
+                    ->searchable(query: function (Builder $query, string $search) {
+                        $clean = preg_replace('/\D/', '', $search);
+                        if (str_starts_with($clean, '91') && strlen($clean) > 10) {
+                            $clean = substr($clean, 2);
+                        }
+                        $clean = substr($clean, -10);
+                        return $query->where(function ($q) use ($search, $clean) {
+                            $q->where('customer_phone', 'like', "%{$search}%");
+                            if (!empty($clean)) {
+                                $q->orWhere('customer_phone', 'like', "%{$clean}%");
+                            }
+                        });
+                    })
+                    ->copyable()
+                    ->copyMessage('Phone number copied')
                     ->toggleable(),
                 
                 // Tables\Columns\TextColumn::make('city')
