@@ -84,7 +84,11 @@ class Coupon extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(related: Category::class);
+    }
 
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class, 'coupon_code', 'code');
     }
     protected static function booted(): void
     {

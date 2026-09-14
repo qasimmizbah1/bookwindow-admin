@@ -12,6 +12,11 @@ use App\Http\Controllers\OrderPdfController;
 //     return view('welcome');
 // })->name('home');
 
+Route::get('/robots.txt', function () {
+    return response("User-agent: *\nDisallow: /\n", 200)
+        ->header('Content-Type', 'text/plain');
+});
+
 Route::redirect('/', 'admin/login');
 
 Route::view('dashboard', 'dashboard')

@@ -13,12 +13,14 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -37,6 +39,10 @@ class AdminPanelProvider extends PanelProvider
             \Biostate\FilamentMenuBuilder\FilamentMenuBuilderPlugin::make(),
         ])
             ->font(family:'Poppins')
+            ->renderHook(
+                PanelsRenderHook::HEAD_START,
+                fn (): HtmlString => new HtmlString('<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">' . PHP_EOL)
+            )
             ->userMenuItems([
                 MenuItem::make()
                     ->label('Store Profile')

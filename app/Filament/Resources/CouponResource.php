@@ -123,6 +123,16 @@ class CouponResource extends Resource
                 Tables\Columns\TextColumn::make('valid_to')
                     ->dateTime()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('orders_count')
+                    ->counts('orders')
+                    ->label('Times Used')
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (int $state): string => $state > 0 ? 'success' : 'gray'),
+                Tables\Columns\TextColumn::make('total_discount')
+                    ->label('Total Discount')
+                    ->getStateUsing(fn (Coupon $record): string => currency_symbol() . ' ' . number_format((float) $record->orders()->sum('discount_amount'), 2))
+                    ->sortable(false),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
             ])

@@ -32,6 +32,18 @@ class ListSalesAnalytics extends ListRecords
                     ]),
                 Tables\Columns\TextColumn::make('customername.first_name')
                     ->label('Customer'),
+                Tables\Columns\TextColumn::make('coupon_code')
+                    ->label('Coupon')
+                    ->searchable()
+                    ->badge()
+                    ->color(fn (?string $state): string => $state ? 'success' : 'gray')
+                    ->formatStateUsing(fn (?string $state): string => $state ?: 'None'),
+                Tables\Columns\TextColumn::make('discount_amount')
+                    ->label('Discount (' . currency_symbol() . ')')
+                    ->money('INR')
+                    ->summarize([
+                        Tables\Columns\Summarizers\Sum::make()->money(),
+                    ]),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('time_period')
@@ -73,6 +85,14 @@ class ListSalesAnalytics extends ListRecords
                         
                         return $query;
                     }),
+                Tables\Filters\TernaryFilter::make('has_coupon')
+                    ->label('Coupon Used')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('coupon_code')->where('coupon_code', '!=', ''),
+                        false: fn (Builder $query) => $query->where(function ($q) {
+                            $q->whereNull('coupon_code')->orWhere('coupon_code', '');
+                        }),
+                    ),
             ], layout: \Filament\Tables\Enums\FiltersLayout::AboveContent)
             ->bulkActions([
                 ExportBulkAction::make()
