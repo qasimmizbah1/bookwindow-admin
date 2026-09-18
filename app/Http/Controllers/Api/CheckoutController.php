@@ -593,7 +593,11 @@ class CheckoutController extends Controller
                     'valid_to'
                 ])
                 ->orderBy('min_cart_amount', 'asc')
-                ->get();
+                ->get()
+                ->map(function ($coupon) {
+                    $coupon->is_first_order_only = (bool)($coupon->is_first_order_only ?? false);
+                    return $coupon;
+                });
 
             return response()->json([
                 'success' => true,
