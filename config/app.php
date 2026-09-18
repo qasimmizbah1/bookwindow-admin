@@ -14,8 +14,8 @@ return [
     */
 
     'name' => env('APP_NAME', 'Book Window'),
-    'admin_email' => env('admin_mail', "qasim@techbeeps.co.in"),
-    'frontend_url' => env('FRONTEND_URL', 'https://bookwindow.vercel.app'),
+    'admin_email' => env('admin_mail', "info@bookwindow.in"),
+    'frontend_url' => env('FRONTEND_URL', 'https://bookwindow.in'),
 
 
     /*
