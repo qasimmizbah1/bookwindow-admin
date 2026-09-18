@@ -67,6 +67,7 @@ public function productsBySlug($slug)
                 'name',
                 'slug',
                 'sku',
+                'model',
                 'image',
                 'description',
                 'mrp',

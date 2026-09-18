@@ -61,6 +61,7 @@ class HomePageResource extends Resource
                     ->schema([
                         Forms\Components\FileUpload::make('slider_image')
                             ->image()
+                            ->disk('public')
                             ->directory('home-page/banner'),
 
                         Forms\Components\TextInput::make('slider_url'),
@@ -74,6 +75,7 @@ class HomePageResource extends Resource
                     ->schema([
                         Forms\Components\FileUpload::make('mslider_image')
                             ->image()
+                            ->disk('public')
                             ->directory('home-page/banner'),
 
                         Forms\Components\TextInput::make('mslider_url'),
@@ -89,34 +91,62 @@ class HomePageResource extends Resource
                                     ->required(),
 
                         Forms\Components\TextInput::make('popular_subtitle')
-                                    ->label('Title')
+                                    ->label('Sub Title')
                                     ->required(),
 
-                        Forms\Components\Select::make('popular_category')
-                            ->label('Select Category')
-                            ->options(Category::pluck('name', 'id'))
-                            ->multiple()
-                            ->searchable(['name'])
-                            ->afterStateUpdated(fn ($state) => is_array($state) ? implode(',', $state) : $state)
+                        Forms\Components\Repeater::make('popular_category')
+                            ->label('Popular Categories (Drag & Drop to set order)')
+                            ->simple(
+                                Forms\Components\Select::make('category_id')
+                                    ->options(Category::pluck('name', 'id'))
+                                    ->searchable()
+                                    ->required()
+                            )
+                            ->addActionLabel('Add Category')
+                            ->reorderable()
                             ->columnSpanFull(),
-                        
-                        
-                    ])->columns(1),
+                    ])->columns(2),
+
+                    Forms\Components\Section::make('Best Sellers')
+                    ->schema([
+                        Forms\Components\TextInput::make('best_sellers_title')
+                                    ->label('Title')
+                                    ->default('Best Sellers')
+                                    ->required(),
+
+                        Forms\Components\TextInput::make('best_sellers_subtitle')
+                                    ->label('Sub Title')
+                                    ->default('Explore our top bestselling books'),
+
+                        Forms\Components\Repeater::make('best_sellers')
+                            ->label('Best Seller Products (Drag & Drop to set order)')
+                            ->simple(
+                                Forms\Components\Select::make('product_id')
+                                    ->options(Product::visibleToCustomers()->pluck('name', 'id'))
+                                    ->searchable()
+                                    ->required()
+                            )
+                            ->addActionLabel('Add Best Seller Product')
+                            ->reorderable()
+                            ->columnSpanFull(),
+                    ])->columns(2),
 
                     Forms\Components\Section::make('mock_tests')
                     ->schema([
                         Forms\Components\TextInput::make('mock_subtitle')
                                     ->label('Sub Title')
                                     ->required(),
-                        Forms\Components\Select::make('mock_test_category')
-                            ->label('Select Category')
-                            ->options(Category::pluck('name', 'id'))
-                            ->multiple()
-                            ->searchable(['name'])
-                            ->afterStateUpdated(fn ($state) => is_array($state) ? implode(',', $state) : $state)
+                        Forms\Components\Repeater::make('mock_test_category')
+                            ->label('Mock Test Categories (Drag & Drop to set order)')
+                            ->simple(
+                                Forms\Components\Select::make('category_id')
+                                    ->options(Category::pluck('name', 'id'))
+                                    ->searchable()
+                                    ->required()
+                            )
+                            ->addActionLabel('Add Category')
+                            ->reorderable()
                             ->columnSpanFull(),
-                        
-                        
                     ])->columns(1),
 
                     Forms\Components\Section::make('hobby')
@@ -124,32 +154,35 @@ class HomePageResource extends Resource
                         Forms\Components\TextInput::make('hobby_subtitle')
                                     ->label('Sub Title')
                                     ->required(),
-                        Forms\Components\Select::make('hobby_category')
-                            ->label('Select Category')
-                            ->options(Category::pluck('name', 'id'))
-                            ->multiple()
-                            ->searchable(['name'])
-                            ->afterStateUpdated(fn ($state) => is_array($state) ? implode(',', $state) : $state)
+                        Forms\Components\Repeater::make('hobby_category')
+                            ->label('Hobby Categories (Drag & Drop to set order)')
+                            ->simple(
+                                Forms\Components\Select::make('category_id')
+                                    ->options(Category::pluck('name', 'id'))
+                                    ->searchable()
+                                    ->required()
+                            )
+                            ->addActionLabel('Add Category')
+                            ->reorderable()
                             ->columnSpanFull(),
-                        
-                        
                     ])->columns(1),
 
-                
                 Forms\Components\Section::make('publications')
                 ->schema([
                     Forms\Components\TextInput::make('publications_subtitle')
                                 ->label('Sub Title')
                                 ->required(),
-                    Forms\Components\Select::make('publication')
-                        ->label('Select Publications')
-                        ->options(Production::pluck('name', 'id'))
-                        ->multiple()
-                        ->searchable(['name'])
-                        ->afterStateUpdated(fn ($state) => is_array($state) ? implode(',', $state) : $state)
+                    Forms\Components\Repeater::make('publication')
+                        ->label('Publications (Drag & Drop to set order)')
+                        ->simple(
+                            Forms\Components\Select::make('publication_id')
+                                ->options(Production::pluck('name', 'id'))
+                                ->searchable()
+                                ->required()
+                        )
+                        ->addActionLabel('Add Publication')
+                        ->reorderable()
                         ->columnSpanFull(),
-                    
-                    
                 ])->columns(1),
 
                 Forms\Components\Section::make('Banner Section')
@@ -160,6 +193,7 @@ class HomePageResource extends Resource
                         Forms\Components\FileUpload::make('banner_images')
                             ->label('Banner Image')
                             ->image()
+                            ->disk('public')
                             ->directory('home-page/banner')
                             ->reorderable(),
                          

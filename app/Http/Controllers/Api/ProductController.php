@@ -83,6 +83,7 @@ class ProductController extends Controller
                     'name',
                     'slug',
                     'sku',
+                    'model',
                     'image',
                     'description',
                     'mrp',
