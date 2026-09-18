@@ -35,27 +35,61 @@ class OrderPdfController extends Controller
         );
     }
     
+    // public function print(Order $order)
+    // {
+    //     $order->load(['items.product', 'items.vendor']);
+
+    //     $vendor = null;
+    //     if (auth()->check() && auth()->user()->isVendor()) {
+    //         $vendor = auth()->user()->vendor;
+    //         $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
+    //     } else {
+    //         $items = $order->items;
+    //         $firstVendor = $order->items->first()?->vendor;
+    //         if ($firstVendor && $order->items->every(fn ($item) => $item->vendor_id === $firstVendor->id)) {
+    //             $vendor = $firstVendor;
+    //         }
+    //     }
+
+    //     return view('pdf.order', [
+    //         'order' => $order,
+    //         'vendor' => $vendor,
+    //         'items' => $items,
+    //         'is_print' => true
+    //     ]);
+    // }
+
     public function print(Order $order)
-    {
-        $order->load(['items.product', 'items.vendor']);
+{
+    $order->load(['items.product', 'items.vendor']);
 
-        $vendor = null;
-        if (auth()->check() && auth()->user()->isVendor()) {
-            $vendor = auth()->user()->vendor;
-            $items = $vendor ? $order->items->where('vendor_id', $vendor->id) : $order->items;
-        } else {
-            $items = $order->items;
-            $firstVendor = $order->items->first()?->vendor;
-            if ($firstVendor && $order->items->every(fn ($item) => $item->vendor_id === $firstVendor->id)) {
-                $vendor = $firstVendor;
-            }
+    $vendor = null;
+
+    if (auth()->check() && auth()->user()->isVendor()) {
+        $vendor = auth()->user()->vendor;
+        $items = $vendor
+            ? $order->items->where('vendor_id', $vendor->id)
+            : $order->items;
+    } else {
+        $items = $order->items;
+
+        $firstVendor = $order->items->first()?->vendor;
+
+        if ($firstVendor && $order->items->every(
+            fn ($item) => $item->vendor_id === $firstVendor->id
+        )) {
+            $vendor = $firstVendor;
         }
-
-        return view('pdf.order', [
-            'order' => $order,
-            'vendor' => $vendor,
-            'items' => $items,
-            'is_print' => true
-        ]);
     }
+
+    $pdf = Pdf::loadView('pdf.order', [
+        'order'  => $order,
+        'vendor' => $vendor,
+        'items'  => $items,
+    ]);
+
+    return $pdf->stream(
+        'order-' . $order->order_number . '.pdf'
+    );
+}
 }

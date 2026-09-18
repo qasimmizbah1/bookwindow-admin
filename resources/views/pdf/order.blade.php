@@ -15,8 +15,8 @@ body {
 .header {
     text-align: center;
     border-bottom: 1px solid #ddd;
-    padding-bottom: 20px;
-    margin-bottom: 20px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
 }
 
 .logo {
@@ -109,11 +109,31 @@ table {
 .bold {
     font-weight: bold;
 }
+@media print {
+    @page {
+        margin: 10mm;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+    }
+}
+
 </style>
 </head>
 
 <body>
-
+@if(isset($is_print) && $is_print)
+<script>
+    window.onload = function() {
+        window.print();
+        setTimeout(function() {
+            window.close();
+        }, 500);
+    }
+</script>
+@endif
 <div class="header">
     @php
         $logoPath = storage_path('app/public/logo.png');
@@ -127,11 +147,23 @@ table {
     @else
         <h2>BookWindow</h2>
     @endif
+    <h3>
+                @if(
+                strtolower($order->payment_method ?? '') == 'cod' ||
+                strtolower($order->payment_method ?? '') == 'cash on delivery' ||
+                ($order->delivery_amount ?? 0) > 0
+                )
+                Collectable amount (COD): ₹{{ number_format($order->total_amount, 2) }}
+                @else
+                Collectable Amount: Paid
+                @endif
+            </h3>
 </div>
 
 <table class="details-section">
     <tr>
-        <td class="deliver-to">
+            <td class="deliver-to">
+            
             <h4>Deliver to,</h4>
             <p style="margin:0;">
                 <span class="bold">Name:</span> {{ $order->first_name }} {{ $order->last_name }}<br>

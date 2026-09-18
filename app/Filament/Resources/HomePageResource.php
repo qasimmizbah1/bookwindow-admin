@@ -74,17 +74,19 @@ class HomePageResource extends Resource
                     ->columnSpanFull()
                     ->schema([
                         Forms\Components\FileUpload::make('mslider_image')
+                            ->label("Image")
                             ->image()
                             ->disk('public')
                             ->directory('home-page/banner'),
 
-                        Forms\Components\TextInput::make('mslider_url'),
+                        Forms\Components\TextInput::make('mslider_url')
+                            ->label("URL"),
                     ]),
 
 
 
 
-                    Forms\Components\Section::make('popular_categories')
+                    Forms\Components\Section::make('Popular Categories')
                     ->schema([
                         Forms\Components\TextInput::make('popular_title')
                                     ->label('Title')
@@ -131,7 +133,7 @@ class HomePageResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(2),
 
-                    Forms\Components\Section::make('mock_tests')
+                    Forms\Components\Section::make('Mock Tests')
                     ->schema([
                         Forms\Components\TextInput::make('mock_subtitle')
                                     ->label('Sub Title')
@@ -149,7 +151,7 @@ class HomePageResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(1),
 
-                    Forms\Components\Section::make('hobby')
+                    Forms\Components\Section::make('Hobby')
                     ->schema([
                         Forms\Components\TextInput::make('hobby_subtitle')
                                     ->label('Sub Title')
@@ -167,7 +169,7 @@ class HomePageResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(1),
 
-                Forms\Components\Section::make('publications')
+                Forms\Components\Section::make('Publications')
                 ->schema([
                     Forms\Components\TextInput::make('publications_subtitle')
                                 ->label('Sub Title')
@@ -205,124 +207,7 @@ class HomePageResource extends Resource
 
                     ]) ->columns(2),
                 
-                // Categories Sections
-                Forms\Components\Section::make('Category Sections')
-                    ->schema([
-
-                        Forms\Components\TextInput::make('cat_sec_title')
-                                    ->label('Title')
-                                    ->required()
-                                    ->columnSpanFull(),
-                        Forms\Components\RichEditor::make('cat_sec_description')
-                            ->label('Section Description')
-                            ->columnSpanFull(),
-                        Forms\Components\Repeater::make('category_sections')
-                            ->label('Category')
-                            ->schema([
-                            Forms\Components\FileUpload::make('cat_icon')
-                            ->label('Category Icon')
-                            ->image()
-                            ->directory('home-page/catgegory')
-                            ->reorderable(),
-
-                                Forms\Components\TextInput::make('cat_title')
-                                    ->label('Title')
-                                    ->required()
-                                    ,
-                                Forms\Components\FileUpload::make('cat_image')
-                                    ->label('Image')
-                                    ->image()
-                                    ->directory('home-page/catgegory'),
-                                Forms\Components\RichEditor::make('cat_content')
-                                    ->label('Content'),
-                                Forms\Components\TextInput::make('cat_button_title')
-                                ->label('Button text'),
-                                Forms\Components\TextInput::make('cat_button_url')
-                                ->label('Button URL'),
-                            ])
-                            ->columns(2)
-                            ,
-                    ]),
-
-                    // Category Tabs
-                Forms\Components\Section::make('Category Tab')
-                    ->schema([
-
-                        Forms\Components\TextInput::make('cat_tab_subtitle')
-                                    ->label('Sub Title')
-                                    ->required(),
-
-                        Forms\Components\TextInput::make('cat_tab_title')
-                                    ->label('Title')
-                                    ->required(),
-
-                        Forms\Components\RichEditor::make('cat_tab_description')
-                            ->label('Section Description')
-                            ->columnSpanFull(),
-
-                        Forms\Components\Select::make('cat_tabs')
-                            ->label('Select Category')
-                            ->options(Category::pluck('name', 'id'))
-                            ->multiple()
-                            ->searchable(['name'])
-                            ->afterStateUpdated(fn ($state) => is_array($state) ? implode(',', $state) : $state)
-                            ->columnSpanFull(),
-                        
-                        
-                    ])->columns(2),
-
-                        // Testimonial Sections
-                        Forms\Components\Section::make('Testimonial Sections')
-                        ->schema([
-                        Forms\Components\Repeater::make('testimonial_sections')
-                        ->label('Sections')
-
-                        ->schema([
-                        Forms\Components\RichEditor::make('testimonial_content')
-                        ->label('Content'),
-
-                        Forms\Components\FileUpload::make('testimonial_image')
-                        ->label('Image')
-                        ->image()
-                        ->directory('home-page/testimonial'),
-                        
-                        Forms\Components\TextInput::make('testimonial_button_title')
-                        ->label('Button text'),
-                        Forms\Components\TextInput::make('testimonial_button_url')
-                        ->label('Button URL'),
-                        ])->columns(2)
-                        ,
-                        ]),
-                        
-                        // Custom Sections
-                        Forms\Components\Section::make('Feature Sections')
-                        ->schema([
-                         Forms\Components\TextInput::make('feature_title')
-                                    ->label('Title')
-                                    ->required()
-                                    ->columnSpanFull(),
-                        Forms\Components\RichEditor::make('feature_description')
-                            ->label('Description')
-                            ->columnSpanFull(),
-
-                        Forms\Components\Repeater::make('custom_sections')
-                        ->label('Feature Sections')
-                        ->schema([
-                        Forms\Components\TextInput::make('title')
-                        ->label('Section Title')
-                        ->required()
-                        ->columnSpanFull(),
-                        Forms\Components\FileUpload::make('image')
-                        ->label('Image')
-                        ->image()
-                        ->directory('home-page/sections'),
-                        Forms\Components\RichEditor::make('content')
-                        ->label('Content'),
-                        ])
-
-                       
-                        ->columns(2),
-                        ]),
+                    //SEO
                     Forms\Components\Section::make('SEO')
                     ->schema([
                         Forms\Components\TextInput::make('meta_tag_title'),

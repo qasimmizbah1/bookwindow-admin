@@ -393,6 +393,7 @@ class OrderResource extends Resource
                                                             <tr class="bg-gray-50 border-b border-gray-200">
                                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
                                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
                                                                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                                                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
                                                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
@@ -407,6 +408,7 @@ class OrderResource extends Resource
                                                     $html .= '<tr class="transition-colors duration-150">
                                                         <td class="px-4 py-3 text-sm text-gray-500">' . $counter . '</td>
                                                         <td class="px-4 py-3 text-sm font-medium text-gray-700">' . e($productName) . '</td>
+                                                        <td class="px-4 py-3 text-sm font-medium text-gray-700">' . e($item->product->model ?? '') . '</td>
                                                         <td class="px-4 py-3 text-sm text-center text-gray-700">' . ($item->quantity ?? 1) . '</td>
                                                         <td class="px-4 py-3 text-sm text-right text-gray-700">' . format_currency($item->price ?? 0, 2) . '</td>
                                                         <td class="px-4 py-3 text-sm text-right font-semibold text-gray-700">' . format_currency($subtotal, 2) . '</td>
