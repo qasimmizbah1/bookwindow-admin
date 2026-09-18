@@ -169,6 +169,7 @@ class HomePageResource extends Resource
                             ->columnSpanFull(),
                     ])->columns(1),
 
+                    
                 Forms\Components\Section::make('Publications')
                 ->schema([
                     Forms\Components\TextInput::make('publications_subtitle')
