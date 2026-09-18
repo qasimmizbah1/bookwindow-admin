@@ -62,44 +62,107 @@ class CouponResource extends Resource
                 Forms\Components\TextInput::make('code')
                     ->required()
                     ->maxLength(255)
-                    ->unique(ignoreRecord: true),
+                    ->unique(ignoreRecord: true)
+                    ->placeholder('e.g. WELCOME50'),
+
                 Forms\Components\Select::make('type')
                     ->options([
-                        'fixed' => 'Fixed Amount',
-                        'percent' => 'Percentage',
+                        'fixed' => 'Fixed Amount (₹)',
+                        'percent' => 'Percentage (%)',
                     ])
-                    ->required(),
-
-                   //Category
-                            Forms\Components\Select::make(name: 'category_id')
-                             ->relationship(
-                                 name:'category', 
-                                 titleAttribute:'name',
-                             )
-                            ->multiple() 
-                            ->preload()
-                            ->searchable()
-                            ->afterStateHydrated(function (Forms\Components\Select $component, $state) {
-                            if (is_string($state)) {
-                            $component->state(json_decode($state, true));
-                            } })
-                             ,
+                    ->required()
+                    ->live(),
 
                 Forms\Components\TextInput::make('value')
+                    ->label(fn (Forms\Get $get): string => $get('type') === 'percent' ? 'Discount Percentage (%)' : 'Discount Amount (₹)')
                     ->required()
                     ->numeric()
                     ->rules(['min:0']),
-                Forms\Components\TextInput::make('min_cart_amount')
+
+                Forms\Components\TextInput::make('max_discount_amount')
+                    ->label('Max Discount Cap (₹)')
+                    ->helperText('Maximum discount limit in ₹ for percentage coupons (optional)')
                     ->numeric()
-                    ->rules(['min:0']),
-                Forms\Components\TextInput::make('max_cart_amount')
-                    ->numeric(),
-                Forms\Components\DateTimePicker::make('valid_from')
+                    ->rules(['min:0'])
+                    ->visible(fn (Forms\Get $get): bool => $get('type') === 'percent'),
+
+                Forms\Components\Select::make('payment_method_restriction')
+                    ->label('Payment Method Restriction')
+                    ->options([
+                        'all' => 'All Payment Methods (Online & COD)',
+                        'online_only' => 'Online (Razorpay / Prepaid) Only',
+                        'cod_only' => 'Cash on Delivery (COD) Only',
+                    ])
+                    ->default('all')
                     ->required(),
-                Forms\Components\DateTimePicker::make('valid_to')
-                    ->required(),
-                Forms\Components\Toggle::make('is_active')
-                    ->required(),
+
+                // Category
+                Forms\Components\Select::make('category_id')
+                    ->label('Applicable Categories (Optional)')
+                    ->relationship(
+                        name: 'category',
+                        titleAttribute: 'name',
+                    )
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->afterStateHydrated(function (Forms\Components\Select $component, $state) {
+                        if (is_string($state)) {
+                            $component->state(json_decode($state, true));
+                        }
+                    }),
+
+                Forms\Components\Section::make('Usage Limits & Restrictions')
+                    ->schema([
+                        Forms\Components\TextInput::make('user_limit')
+                            ->label('Usage Limit Per Customer')
+                            ->helperText('Max times a single customer can use this coupon (e.g. 1 for Welcome / Single-Use). Leave empty for unlimited.')
+                            ->numeric()
+                            ->rules(['min:1'])
+                            ->placeholder('e.g. 1'),
+
+                        Forms\Components\TextInput::make('usage_limit')
+                            ->label('Total Usage Limit (Overall)')
+                            ->helperText('Total times this coupon can be used across all customers. Leave empty for unlimited.')
+                            ->numeric()
+                            ->rules(['min:1'])
+                            ->placeholder('e.g. 100'),
+
+                        Forms\Components\Toggle::make('is_first_order_only')
+                            ->label('First Order Only (New Customers Only)')
+                            ->helperText('Restrict this coupon strictly to brand-new customers who have never placed an order.')
+                            ->default(false),
+                    ])->columns(3),
+
+                Forms\Components\Section::make('Cart Value & Dates')
+                    ->schema([
+                        Forms\Components\TextInput::make('min_cart_amount')
+                            ->label('Min Cart Amount (₹)')
+                            ->numeric()
+                            ->rules(['min:0'])
+                            ->placeholder('0'),
+
+                        Forms\Components\TextInput::make('max_cart_amount')
+                            ->label('Max Cart Amount (₹)')
+                            ->numeric()
+                            ->rules(['min:0'])
+                            ->placeholder('Optional'),
+
+                        Forms\Components\DateTimePicker::make('valid_from')
+                            ->label('Valid From')
+                            ->required()
+                            ->default(now()),
+
+                        Forms\Components\DateTimePicker::make('valid_to')
+                            ->label('Valid To')
+                            ->required()
+                            ->default(now()->addMonths(1)),
+
+                        Forms\Components\Toggle::make('is_active')
+                            ->label('Active Status')
+                            ->default(true)
+                            ->required(),
+                    ])->columns(2),
             ]);
     }
 
@@ -108,31 +171,74 @@ class CouponResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('code')
-                    ->searchable(),
+                    ->searchable()
+                    ->badge()
+                    ->color('primary')
+                    ->copyable(),
+
                 Tables\Columns\TextColumn::make('type')
-                    ->searchable(),
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state)),
+
                 Tables\Columns\TextColumn::make('value')
-                    ->numeric()
+                    ->label('Discount')
+                    ->formatStateUsing(function (Coupon $record): string {
+                        if ($record->type === 'percent') {
+                            $text = $record->value . '%';
+                            if ($record->max_discount_amount) {
+                                $text .= ' (Max ₹' . $record->max_discount_amount . ')';
+                            }
+                            return $text;
+                        }
+                        return '₹' . number_format((float) $record->value, 2);
+                    })
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('payment_method_restriction')
+                    ->label('Payment')
+                    ->badge()
+                    ->colors([
+                        'info' => 'all',
+                        'success' => 'online_only',
+                        'warning' => 'cod_only',
+                    ])
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'online_only' => 'Online Only',
+                        'cod_only' => 'COD Only',
+                        default => 'All Methods',
+                    }),
+
+                Tables\Columns\TextColumn::make('user_limit')
+                    ->label('Per User Limit')
+                    ->formatStateUsing(fn (?int $state): string => $state ? $state . ' time' . ($state > 1 ? 's' : '') : 'Unlimited')
+                    ->badge()
+                    ->color(fn (?int $state): string => $state ? 'warning' : 'gray'),
+
+                Tables\Columns\IconColumn::make('is_first_order_only')
+                    ->label('1st Order Only')
+                    ->boolean(),
+
                 Tables\Columns\TextColumn::make('min_cart_amount')
-                    ->numeric()
+                    ->label('Min Cart')
+                    ->formatStateUsing(fn ($state) => $state ? '₹' . $state : '-')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('valid_from')
-                    ->dateTime()
-                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('valid_to')
-                    ->dateTime()
+                    ->dateTime('d M Y')
                     ->sortable(),
+
                 Tables\Columns\TextColumn::make('orders_count')
                     ->counts('orders')
                     ->label('Times Used')
                     ->sortable()
                     ->badge()
                     ->color(fn (int $state): string => $state > 0 ? 'success' : 'gray'),
+
                 Tables\Columns\TextColumn::make('total_discount')
                     ->label('Total Discount')
                     ->getStateUsing(fn (Coupon $record): string => currency_symbol() . ' ' . number_format((float) $record->orders()->sum('discount_amount'), 2))
                     ->sortable(false),
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
             ])

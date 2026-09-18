@@ -18,11 +18,14 @@ class Coupon extends Model
         'code',
         'type',
         'value',
-        'catgeory_id',
+        'max_discount_amount',
+        'category_id',
         'min_cart_amount',
         'max_cart_amount',
         'usage_limit',
         'user_limit',
+        'is_first_order_only',
+        'payment_method_restriction',
         'valid_from',
         'valid_to',
         'is_active',
@@ -32,7 +35,13 @@ class Coupon extends Model
     protected $casts = [
         'valid_from' => 'datetime',
         'valid_to' => 'datetime',
-        'catgeory_id'=> 'array',
+        'category_id' => 'array',
+        'is_first_order_only' => 'boolean',
+        'is_active' => 'boolean',
+        'value' => 'float',
+        'max_discount_amount' => 'float',
+        'min_cart_amount' => 'float',
+        'max_cart_amount' => 'float',
     ];
 
     /**
@@ -53,11 +62,45 @@ class Coupon extends Model
     public function calculateDiscount(float $amount): float
     {
         if ($this->type === 'fixed') {
-            return min($this->value, $amount);
+            return min((float) $this->value, $amount);
         }
         
         // For percentage discount
-        return round($amount * ($this->value / 100), 2);
+        $discount = round($amount * ((float) $this->value / 100), 2);
+        
+        // Apply maximum discount cap if configured
+        if ($this->max_discount_amount && $this->max_discount_amount > 0) {
+            $discount = min($discount, (float) $this->max_discount_amount);
+        }
+        
+        return min($discount, $amount);
+    }
+
+    /**
+     * Check if coupon is valid for payment method (all, online_only, cod_only)
+     */
+    public function isValidForPaymentMethod(?string $paymentMethod): bool
+    {
+        if (empty($this->payment_method_restriction) || $this->payment_method_restriction === 'all') {
+            return true;
+        }
+
+        if (empty($paymentMethod)) {
+            return true;
+        }
+
+        $isOnline = in_array(strtolower($paymentMethod), ['razorpay', 'online', 'prepaid']);
+        $isCod = in_array(strtolower($paymentMethod), ['cod', 'cash_on_delivery']);
+
+        if ($this->payment_method_restriction === 'online_only' && !$isOnline) {
+            return false;
+        }
+
+        if ($this->payment_method_restriction === 'cod_only' && !$isCod) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -75,6 +118,10 @@ class Coupon extends Model
         }
 
         if ($this->min_cart_amount && $amount < $this->min_cart_amount) {
+            return false;
+        }
+
+        if ($this->max_cart_amount && $amount > $this->max_cart_amount) {
             return false;
         }
 

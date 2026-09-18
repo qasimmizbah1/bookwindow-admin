@@ -95,51 +95,23 @@ class CheckoutController extends Controller
 
         // Process coupon if provided
         $discountAmount = $request->discount_amount ?? 0;
-        $coupon = null;
         
         if ($request->coupon_code) {
-           
-            //     $coupon = DB::table('coupons')
-            //     ->where('code', $request->coupon_code)
-            //     ->where(function ($query) {
-            //     $query->where('valid_from', '<=', now())
-            //     ->orWhereNull('valid_from');
-            //     })
-            //     ->where(function ($query) {
-            //     $query->where('valid_to', '>=', now())
-            //     ->orWhereNull('valid_to');
-            //     })
-            //     ->where('is_active', true)
-            //     ->first();
-            
-            // if ($coupon) {
-            //     if (!$coupon->min_cart_amount || $subtotal >= $coupon->min_cart_amount) {
-            //     $subtotal = DB::table('cart_items')
-            //     ->where('cart_id', $cart->id)
-            //     ->sum(DB::raw('price * quantity'));
-
-            //     $newSubtotal = $subtotal;
-            //     $discountAmount = 0;
-
-                   
-
-            //     if ($coupon->type === 'percent') {
-            //      $discountAmount = $subtotal * ($coupon->value / 100);
-            //     } elseif ($coupon->type === 'fixed') {
-            //     $discountAmount = min($coupon->value, $subtotal); // Don't discount more than subtotal
-            //     }
-                
-            //     // DB::table('carts')
-            //     // ->where('id', $cartId)
-            //     // ->update([
-            //     // 'subtotal' => $newSubtotal,
-            //     // 'discount_amount' => $discountAmount,
-            //     // 'coupon_id' => $coupon->id,
-            //     // 'total' => $newSubtotal // Assuming you might want to update total as well
-            //     // ]);
-
-            //    }
-            // }
+            $coupon = DB::table('coupons')->where('code', $request->coupon_code)->first();
+            if ($coupon) {
+                $couponError = $this->validateCouponRules($coupon, $request, $subtotal);
+                if ($couponError) {
+                    return response()->json([
+                        'message' => $couponError,
+                        'error' => $couponError
+                    ], 422);
+                }
+            } else {
+                return response()->json([
+                    'message' => 'Invalid coupon code',
+                    'error' => 'Invalid coupon code'
+                ], 422);
+            }
         }
             
          // Process shipping
@@ -424,45 +396,163 @@ class CheckoutController extends Controller
 
         return null;
     }
+    /**
+     * Validate all coupon rules (dates, limits, first order, payment method, cart amount)
+     */
+    protected function validateCouponRules($coupon, Request $request, $subtotal = 0): ?string
+    {
+        $now = now();
+
+        // 1. Active & Date validity
+        if (!$coupon->is_active) {
+            return 'This coupon is no longer active.';
+        }
+        if ($coupon->valid_from && \Carbon\Carbon::parse($coupon->valid_from)->gt($now)) {
+            return 'This coupon is not yet valid.';
+        }
+        if ($coupon->valid_to && \Carbon\Carbon::parse($coupon->valid_to)->lt($now)) {
+            return 'This coupon has expired.';
+        }
+
+        // 2. Minimum / Maximum Cart Amount
+        if (!empty($coupon->min_cart_amount) && $subtotal > 0 && $subtotal < (float)$coupon->min_cart_amount) {
+            return 'Minimum cart amount should be ₹' . number_format((float)$coupon->min_cart_amount, 2) . ' to apply this coupon.';
+        }
+        if (!empty($coupon->max_cart_amount) && $subtotal > 0 && $subtotal > (float)$coupon->max_cart_amount) {
+            return 'Maximum cart amount should be ₹' . number_format((float)$coupon->max_cart_amount, 2) . ' for this coupon.';
+        }
+
+        // 3. Payment Method Restriction
+        $paymentMethod = $request->payment_method ?? null;
+        if (!empty($coupon->payment_method_restriction) && $coupon->payment_method_restriction !== 'all' && !empty($paymentMethod)) {
+            $isOnline = in_array(strtolower($paymentMethod), ['razorpay', 'online', 'prepaid']);
+            $isCod = in_array(strtolower($paymentMethod), ['cod', 'cash_on_delivery']);
+
+            if ($coupon->payment_method_restriction === 'online_only' && !$isOnline) {
+                return 'This coupon is valid only on Online / Prepaid payments.';
+            }
+            if ($coupon->payment_method_restriction === 'cod_only' && !$isCod) {
+                return 'This coupon is valid only on Cash on Delivery (COD) orders.';
+            }
+        }
+
+        // 4. Overall Usage Limit
+        if (!empty($coupon->usage_limit)) {
+            $totalUses = Order::where('coupon_code', $coupon->code)
+                ->whereNotIn('status', ['payment_cancelled', 'cancelled'])
+                ->count();
+            if ($totalUses >= (int)$coupon->usage_limit) {
+                return 'This coupon has reached its overall usage limit.';
+            }
+        }
+
+        // Customer details for user-specific checks
+        $email = $request->email ? trim(strtolower($request->email)) : null;
+        $phone = $request->phone ? preg_replace('/\D/', '', (string)$request->phone) : null;
+        if ($phone && strlen($phone) > 10) {
+            $phone = substr($phone, -10);
+        }
+        $userId = $request->user_id ?? (auth('api')->id() ?: (auth()->id() ?: null));
+
+        // 5. First Order Only (New Customer Only)
+        if (!empty($coupon->is_first_order_only)) {
+            $hasPreviousOrders = false;
+            if ($userId) {
+                $hasPreviousOrders = Order::where('user_id', $userId)
+                    ->whereNotIn('status', ['payment_cancelled', 'cancelled'])
+                    ->exists();
+            }
+            if (!$hasPreviousOrders && $email) {
+                $hasPreviousOrders = Order::where('email', $email)
+                    ->whereNotIn('status', ['payment_cancelled', 'cancelled'])
+                    ->exists();
+            }
+            if (!$hasPreviousOrders && $phone) {
+                $hasPreviousOrders = Order::where(function ($q) use ($phone) {
+                    $q->where('customer_phone', 'LIKE', "%{$phone}%");
+                })->whereNotIn('status', ['payment_cancelled', 'cancelled'])->exists();
+            }
+
+            if ($hasPreviousOrders) {
+                return 'This coupon is valid only on your first order.';
+            }
+        }
+
+        // 6. Per-User Usage Limit (e.g. 1 time per user)
+        if (!empty($coupon->user_limit)) {
+            $userLimit = (int)$coupon->user_limit;
+
+            if ($userId || $email || $phone) {
+                $customerUsageCount = Order::where('coupon_code', $coupon->code)
+                    ->whereNotIn('status', ['payment_cancelled', 'cancelled'])
+                    ->where(function ($q) use ($userId, $email, $phone) {
+                        $hasCondition = false;
+                        if ($userId) {
+                            $q->orWhere('user_id', $userId);
+                            $hasCondition = true;
+                        }
+                        if ($email) {
+                            $q->orWhere('email', $email);
+                            $hasCondition = true;
+                        }
+                        if ($phone) {
+                            $q->orWhere('customer_phone', 'LIKE', "%{$phone}%");
+                            $hasCondition = true;
+                        }
+                        if (!$hasCondition) {
+                            $q->whereRaw('1 = 0');
+                        }
+                    })
+                    ->count();
+
+                if ($customerUsageCount >= $userLimit) {
+                    return $userLimit === 1
+                        ? 'You have already used this coupon on a previous order.'
+                        : "You have reached the maximum allowed usage ({$userLimit} times) for this coupon.";
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function showCouponCode(Request $request)
     {
         try {
-            
+            $code = $request->coupon_code ?: $request->route('coupon_code');
+
+            if (!$code) {
+                return response()->json(['message' => 'Please provide a coupon code'], 422);
+            }
+
             $coupon = DB::table('coupons')
-                ->where('code', $request->coupon_code)
-                ->where(function ($query) {
-                $query->where('valid_from', '<=', now())
-                ->orWhereNull('valid_from');
-                })
-                ->where(function ($query) {
-                $query->where('valid_to', '>=', now())
-                ->orWhereNull('valid_to');
-                })
+                ->where('code', $code)
                 ->where('is_active', true)
                 ->first();
 
             if (empty($coupon)) {
-            return response()->json(['message' => 'Invalid coupon code'], 422);
-            }
-           
-            if ($coupon->usage_limit && $coupon->used_count >= $coupon->usage_limit) {
-            return response()->json(['message' => 'Coupon usage limit reached'], 422);
+                return response()->json(['message' => 'Invalid or inactive coupon code'], 422);
             }
 
-            //$cart->update(['coupon_id' => $coupon->id]);
-            //$coupon->increment('used_count');
-            
+            $subtotal = (float)($request->subtotal ?? $request->cart_subtotal ?? 0);
+            $couponError = $this->validateCouponRules($coupon, $request, $subtotal);
 
-            return $coupon;
+            if ($couponError) {
+                return response()->json([
+                    'message' => $couponError,
+                    'error' => $couponError
+                ], 422);
+            }
 
-        }
-            catch (\Exception $e) {
-            logger()->error('Email sending error:', [
+            return response()->json($coupon);
+
+        } catch (\Exception $e) {
+            \Log::error('Coupon validation error:', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+            return response()->json(['message' => 'Unable to validate coupon'], 500);
         }
-            
     }
 
     public function getAvailableCoupons(Request $request)
@@ -479,11 +569,11 @@ class CheckoutController extends Controller
                         ->orWhereNull('valid_to');
                 });
 
-            // Only check usage_limit if column exists
-            if (Schema::hasColumn('coupons', 'usage_limit') && Schema::hasColumn('coupons', 'used_count')) {
+            // Check overall usage limit if column exists
+            if (Schema::hasColumn('coupons', 'usage_limit')) {
                 $query->where(function ($q) {
                     $q->whereNull('usage_limit')
-                        ->orWhereRaw('used_count < usage_limit');
+                        ->orWhere('usage_limit', '<=', 0);
                 });
             }
 
@@ -492,9 +582,13 @@ class CheckoutController extends Controller
                     'code',
                     'type',
                     'value',
+                    'max_discount_amount',
                     'category_id',
                     'min_cart_amount',
                     'max_cart_amount',
+                    'user_limit',
+                    'is_first_order_only',
+                    'payment_method_restriction',
                     'valid_from',
                     'valid_to'
                 ])
@@ -629,60 +723,46 @@ class CheckoutController extends Controller
 
         protected function calculateProductPriceWithCoupon($item, $couponCode, $subtotal)
         {
-        $product_price = $item->price;
+            $product_price = $item->price;
 
-        if ($couponCode) {
-        $coupon = DB::table('coupons')
-            ->where('code', $couponCode)
-            ->where(function ($query) {
-                $query->where('valid_from', '<=', now())
-                    ->orWhereNull('valid_from');
-            })
-            ->where(function ($query) {
-                $query->where('valid_to', '>=', now())
-                    ->orWhereNull('valid_to');
-            })
-            ->where('is_active', true)
-            ->first();
-
-        if ($coupon) {
-            if (!$coupon->min_cart_amount || !$coupon->max_cart_amount || 
-                ($subtotal >= $coupon->min_cart_amount && $subtotal <= $coupon->max_cart_amount)) {
-
-                $couponCategoryIds = json_decode($coupon->category_id, true) ?? [];
-
-                $product = DB::table('products')
-                    ->where('id', $item->product_id)
-                    ->where(function($query) use ($couponCategoryIds) {
-                        $query->whereIn('category_id', $couponCategoryIds)
-                            ->orWhereIn('sub_category_id', $couponCategoryIds);
-                    })
+            if ($couponCode) {
+                $coupon = DB::table('coupons')
+                    ->where('code', $couponCode)
+                    ->where('is_active', true)
                     ->first();
 
-                if (!empty($coupon->category_id)) {
-                    if ($product) {
-                        if ($coupon->type === 'percent') {
-                            $product_dis = $item->price * ($coupon->value / 100);
-                        } elseif ($coupon->type === 'fixed') {
-                            $product_dis = min($coupon->value, $item->price);
+                if ($coupon) {
+                    if ((!$coupon->min_cart_amount || $subtotal >= (float)$coupon->min_cart_amount) &&
+                        (!$coupon->max_cart_amount || $subtotal <= (float)$coupon->max_cart_amount)) {
+
+                        $couponCategoryIds = json_decode($coupon->category_id, true) ?? [];
+
+                        $product = DB::table('products')
+                            ->where('id', $item->product_id)
+                            ->where(function($query) use ($couponCategoryIds) {
+                                $query->whereIn('category_id', $couponCategoryIds)
+                                    ->orWhereIn('sub_category_id', $couponCategoryIds);
+                            })
+                            ->first();
+
+                        $isApplicable = empty($coupon->category_id) || $product;
+
+                        if ($isApplicable) {
+                            if ($coupon->type === 'percent') {
+                                $product_dis = $item->price * ((float)$coupon->value / 100);
+                                if (!empty($coupon->max_discount_amount) && (float)$coupon->max_discount_amount > 0) {
+                                    $product_dis = min($product_dis, (float)$coupon->max_discount_amount);
+                                }
+                            } elseif ($coupon->type === 'fixed') {
+                                $product_dis = min((float)$coupon->value, $item->price);
+                            }
+                            $product_price = max(0, $item->price - ($product_dis ?? 0));
                         }
-                        $product_price = $item->price - ($product_dis ?? 0);
-                    } else {
-                        $product_price = $item->price;
                     }
-                } else {
-                    if ($coupon->type === 'percent') {
-                        $product_dis = $item->price * ($coupon->value / 100);
-                    } elseif ($coupon->type === 'fixed') {
-                        $product_dis = min($coupon->value, $item->price);
-                    }
-                    $product_price = $item->price - ($product_dis ?? 0);   
                 }
             }
-        }
-        }
 
-        return $product_price;
+            return $product_price;
         }
 
         public function razorpayWebhook(Request $request)
