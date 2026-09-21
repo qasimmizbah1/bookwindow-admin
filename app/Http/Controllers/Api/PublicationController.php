@@ -18,7 +18,7 @@ class PublicationController extends Controller
 
         //$production = Production::with('products')->get();
         $production = Production::where('is_visible', 1)
-    ->select('name', 'description', 'publication_img')
+    ->select('id','name','slug','description', 'publication_img')
     ->get();
 
 
