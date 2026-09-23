@@ -128,11 +128,11 @@ class OrderApiController extends Controller
             ], 422);
         }
 
-        // Already cancelled guard (including payment_cancelled, failed, declined)
-        if (in_array($currentStatus, ['cancelled', 'payment_cancelled', 'declined', 'failed']) || str_contains($currentStatus, 'cancel')) {
+        // Already cancelled or refunded guard (including payment_cancelled, failed, declined, refunded)
+        if (in_array($currentStatus, ['cancelled', 'payment_cancelled', 'declined', 'failed', 'refunded']) || str_contains($currentStatus, 'cancel') || str_contains($currentStatus, 'refund')) {
             return response()->json([
                 'status' => false,
-                'message' => 'This order is already cancelled.'
+                'message' => 'This order cannot be cancelled as its status is ' . $order->status . '.'
             ], 422);
         }
 

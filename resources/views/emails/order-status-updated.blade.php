@@ -159,6 +159,7 @@
                     'cancelled', 'declined' => 'background-color: #fef2f2; border: 1px solid #fecaca;',
                     'completed', 'delivered' => 'background-color: #f0fdf4; border: 1px solid #bbf7d0;',
                     'order_shipped', 'shipped', 'processing' => 'background-color: #eff6ff; border: 1px solid #bfdbfe;',
+                    'refunded' => 'background-color: #faf5ff; border: 1px solid #e9d5ff;',
                     default => 'background-color: #fffbeb; border: 1px solid #fde68a;'
                 };
 
@@ -167,6 +168,7 @@
                     'cancelled', 'declined' => '#dc2626',
                     'completed', 'delivered' => '#16a34a',
                     'order_shipped', 'shipped', 'processing' => '#2563eb',
+                    'refunded' => '#7e22ce',
                     default => '#d97706'
                 };
 
@@ -206,6 +208,17 @@
                                     <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #1e40af; letter-spacing: 0.5px;">Tracking / Consignment ID</div>
                                     <div style="font-size: 13px; color: #1e3a8a; font-family: monospace; font-weight: bold; margin-top: 2px;">{{ $order->tracking_id }}</div>
                                 @endif
+                            </div>
+                        </td>
+                    </tr>
+                    @endif
+
+                    @if($statusKey === 'refunded')
+                    <tr>
+                        <td colspan="2" style="padding-top: 12px;">
+                            <div style="background-color: #ffffff; border: 1px solid #e9d5ff; border-left: 4px solid #7e22ce; border-radius: 6px; padding: 10px 14px;">
+                                <div style="font-size: 11px; font-weight: bold; text-transform: uppercase; color: #6b21a8; letter-spacing: 0.5px;">Refund Processed</div>
+                                <div style="font-size: 13px; color: #581c87; font-weight: 500; margin-top: 3px; line-height: 1.4;">The refund for this order has been processed to your original payment source / method.</div>
                             </div>
                         </td>
                     </tr>

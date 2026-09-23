@@ -88,8 +88,10 @@ class SalesOrdersResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'pending' => 'warning',
                         'processing' => 'info',
+                        'order_shipped' => 'primary',
                         'completed' => 'success',
-                        'cancelled' => 'danger',
+                        'cancelled', 'declined' => 'danger',
+                        'refunded' => 'purple',
                         default => 'gray',
                     }),
 

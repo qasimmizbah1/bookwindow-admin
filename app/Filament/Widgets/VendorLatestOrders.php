@@ -85,6 +85,7 @@ class VendorLatestOrders extends BaseWidget
                         'order_shipped' => 'primary',
                         'completed' => 'success',
                         'cancelled', 'declined' => 'danger',
+                        'refunded' => 'purple',
                         default => 'gray',
                     }),
             ])

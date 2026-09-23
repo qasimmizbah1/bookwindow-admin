@@ -63,10 +63,13 @@ class LatestOrders extends BaseWidget
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
+                        'new' => 'gray',
                         'pending' => 'warning',
                         'processing' => 'info',
+                        'order_shipped' => 'primary',
                         'completed' => 'success',
-                        'cancelled' => 'danger',
+                        'cancelled', 'declined' => 'danger',
+                        'refunded' => 'purple',
                         default => 'gray',
                     })
             ])

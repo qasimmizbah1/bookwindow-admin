@@ -183,6 +183,7 @@ class OrderResource extends Resource
                                                         "completed"=>"Order Completed/Delivered",
                                                         "cancelled"=>"Order Cancelled",
                                                         "declined"=>"Order Declined",
+                                                        "refunded"=>"Refunded",
                                                     ])
                                                     ->required()
                                                     ->live()
@@ -572,17 +573,21 @@ class OrderResource extends Resource
                         'gray' => 'new',
                         'warning' => 'pending',
                         'info' => 'processing',
+                        'primary' => 'order_shipped',
                         'success' => 'completed',
                         'danger' => 'declined',
                         'danger' => 'cancelled',
+                        'purple' => 'refunded',
                     ])
                     ->icons([
                         'heroicon-o-clock' => 'new',
                         'heroicon-o-exclamation-circle' => 'pending',
                         'heroicon-o-arrow-path' => 'processing',
+                        'heroicon-o-truck' => 'order_shipped',
                         'heroicon-o-check-circle' => 'completed',
                         'heroicon-o-x-circle' => 'declined',
                         'heroicon-o-x-mark' => 'cancelled',
+                        'heroicon-o-arrow-uturn-left' => 'refunded',
                     ])
                     ->description(function ($record) {
                         if ((in_array($record->status, ['cancelled', 'declined', 'payment_cancelled']) || str_contains((string)$record->status, 'cancel')) && !empty($record->cancellation_reason)) {
@@ -737,6 +742,7 @@ class OrderResource extends Resource
                         "completed"=>"Completed",
                         "declined"=>"Declined",
                         "cancelled"=>"Cancelled",
+                        "refunded"=>"Refunded",
                     ]),
                 
                 Tables\Filters\SelectFilter::make('payment_status')
@@ -810,6 +816,7 @@ class OrderResource extends Resource
                                     "completed"=>"Completed",
                                     "declined"=>"Declined",
                                     "cancelled"=>"Cancelled",
+                                    "refunded"=>"Refunded",
                                 ])
                                 ->required()
                                 ->live(),
@@ -946,9 +953,11 @@ class OrderResource extends Resource
                                     "new"=>"New",
                                     "pending"=>"Pending",
                                     "processing"=>"Processing",
+                                    "order_shipped"=>"Order Shipped",
                                     "completed"=>"Completed",
                                     "declined"=>"Declined",
                                     "cancelled"=>"Cancelled",
+                                    "refunded"=>"Refunded",
                                 ])
                                 ->required(),
                         ])
