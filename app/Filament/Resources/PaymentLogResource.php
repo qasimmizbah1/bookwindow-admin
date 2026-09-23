@@ -108,7 +108,7 @@ class PaymentLogResource extends Resource
                         'webhook' => 'Webhook',
                         'cron_sync' => 'Cron Sync',
                         'manual_recovery' => 'Manual Recover',
-                        'order_created' => 'Created',
+                        'order_created' => 'Checkout Init',
                         default => ucfirst($state),
                     })
                     ->sortable(),
@@ -116,13 +116,35 @@ class PaymentLogResource extends Resource
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
-                    ->colors([
-                        'success' => 'success',
-                        'gray' => 'skipped',
-                        'warning' => 'pending',
-                        'danger' => 'failed',
-                        'danger' => 'error',
-                    ])
+                    ->color(function ($state, $record) {
+                        if ($record && $record->event_type === 'order_created' && in_array($state, ['success', 'initiated'])) {
+                            return 'info';
+                        }
+                        return match ($state) {
+                            'success' => 'success',
+                            'initiated' => 'info',
+                            'pending' => 'warning',
+                            'cancelled' => 'warning',
+                            'failed', 'error' => 'danger',
+                            'skipped' => 'gray',
+                            default => 'gray',
+                        };
+                    })
+                    ->formatStateUsing(function ($state, $record) {
+                        if ($record && $record->event_type === 'order_created' && $state === 'success') {
+                            return 'Initiated';
+                        }
+                        return match ($state) {
+                            'initiated' => 'Initiated',
+                            'pending' => 'Pending',
+                            'success' => 'Success',
+                            'failed' => 'Failed',
+                            'cancelled' => 'Cancelled',
+                            'skipped' => 'Skipped',
+                            'error' => 'Error',
+                            default => ucfirst($state),
+                        };
+                    })
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('amount')
@@ -157,17 +179,19 @@ class PaymentLogResource extends Resource
                         'webhook' => 'Webhook',
                         'cron_sync' => 'Cron Sync',
                         'manual_recovery' => 'Manual Recovery',
-                        'order_created' => 'Order Created',
+                        'order_created' => 'Checkout Initiated',
                     ]),
 
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([
-                        'success' => 'Success',
+                        'success' => 'Success (Paid)',
+                        'initiated' => 'Initiated',
+                        'cancelled' => 'Cancelled',
                         'failed' => 'Failed',
+                        'pending' => 'Pending',
                         'skipped' => 'Skipped',
                         'error' => 'Error',
-                        'pending' => 'Pending',
                     ]),
             ])
             ->actions([

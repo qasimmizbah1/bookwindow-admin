@@ -71,10 +71,10 @@ class RazorpayService
             'order_id' => $order->id,
             'order_number' => $orderNumber,
             'event_type' => 'order_created',
-            'status' => 'success',
+            'status' => 'initiated',
             'razorpay_order_id' => $razorpayOrder->id,
             'amount' => $order->total_amount,
-            'message' => 'Razorpay order created with ID: ' . $razorpayOrder->id,
+            'message' => 'Checkout session initiated (Payment Pending). Razorpay Order ID: ' . $razorpayOrder->id,
             'payload' => [
                 'receipt' => $params['receipt'],
                 'amount' => $params['amount'],

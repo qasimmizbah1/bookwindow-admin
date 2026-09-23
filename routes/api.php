@@ -68,6 +68,7 @@ Route::get('/coupons', [CheckoutController::class, 'getAvailableCoupons']);
 
 // Direct Razorpay Webhook endpoint (e.g. /api/razorpay/webhook)
 Route::post('/razorpay/webhook', [CheckoutController::class, 'razorpayWebhook'])->name('razorpay.webhook');
+Route::post('/razorpay/cancel', [CheckoutController::class, 'handlePaymentCancel'])->name('razorpay.cancel.direct');
 
 Route::get('orders/{order_number}', [OrderApiController::class, 'show']);
 

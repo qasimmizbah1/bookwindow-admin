@@ -619,13 +619,17 @@ class CheckoutController extends Controller
         {
         $request->validate([
             'order_id' => 'required|numeric',
-            'razorpay_order_id' => 'required|string'
+            'razorpay_order_id' => 'nullable|string'
         ]);
 
-
-        $order = Order::where('id', $request->order_id)
-                    ->where('razorpay_order_id', $request->razorpay_order_id)
-                    ->first();
+        $query = Order::where('id', $request->order_id);
+        if ($request->filled('razorpay_order_id')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('razorpay_order_id', $request->razorpay_order_id)
+                  ->orWhereNull('razorpay_order_id');
+            });
+        }
+        $order = $query->first();
 
         if ($order) {
             DB::transaction(function () use ($order) {
@@ -642,8 +646,8 @@ class CheckoutController extends Controller
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'event_type' => 'callback',
-                'status' => 'failed',
-                'razorpay_order_id' => $order->razorpay_order_id,
+                'status' => 'cancelled',
+                'razorpay_order_id' => $order->razorpay_order_id ?? $request->razorpay_order_id,
                 'amount' => $order->total_amount,
                 'message' => 'Payment cancelled by customer during checkout modal',
             ]);
