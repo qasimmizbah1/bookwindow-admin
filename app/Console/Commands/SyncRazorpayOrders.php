@@ -78,12 +78,6 @@ class SyncRazorpayOrders extends Command
 
         $this->info("Found {$orders->count()} pending Razorpay order(s) to verify.");
 
-        $razorpayService->logEvent([
-            'event_type' => 'cron_sync',
-            'status' => 'pending',
-            'message' => "Cron recovery command started. Processing {$orders->count()} orders.",
-        ]);
-
         $recoveredCount = 0;
         $unpaidCount = 0;
         $failedCount = 0;
@@ -142,6 +136,20 @@ class SyncRazorpayOrders extends Command
                 } elseif ($failedPayment) {
                     $this->line("  -> Payment status on Razorpay is 'failed'. Order left pending or will expire.");
                     $failedCount++;
+
+                    // Log failed payment so admin can see why it failed
+                    $failDesc = $failedPayment['error_description'] ?? ($failedPayment['error_reason'] ?? 'Payment failed/declined on Razorpay');
+                    $razorpayService->logEvent([
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'event_type' => 'cron_sync',
+                        'status' => 'failed',
+                        'razorpay_order_id' => $order->razorpay_order_id,
+                        'razorpay_payment_id' => $failedPayment['id'] ?? null,
+                        'amount' => $order->total_amount,
+                        'message' => 'Payment failed on Razorpay: ' . $failDesc,
+                        'payload' => (is_object($failedPayment) && method_exists($failedPayment, 'toArray')) ? $failedPayment->toArray() : (array)$failedPayment,
+                    ]);
                 } else {
                     $this->line("  -> Payment exists but not captured yet (authorized / created).");
                     $unpaidCount++;
@@ -169,12 +177,7 @@ class SyncRazorpayOrders extends Command
 
         $summaryMessage = "Razorpay sync completed: {$recoveredCount} recovered, {$unpaidCount} unpaid, {$failedCount} failed, {$errorCount} errors.";
         $this->info($summaryMessage);
-
-        $razorpayService->logEvent([
-            'event_type' => 'cron_sync',
-            'status' => 'success',
-            'message' => $summaryMessage,
-        ]);
+        Log::info($summaryMessage);
 
         return Command::SUCCESS;
     }

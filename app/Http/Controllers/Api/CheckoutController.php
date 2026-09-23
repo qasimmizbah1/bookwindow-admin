@@ -636,6 +636,18 @@ class CheckoutController extends Controller
                     'cancellation_reason' => 'Payment cancelled by customer during checkout',
                 ]);
             });
+
+            $razorpayService = new RazorpayService();
+            $razorpayService->logEvent([
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'event_type' => 'callback',
+                'status' => 'failed',
+                'razorpay_order_id' => $order->razorpay_order_id,
+                'amount' => $order->total_amount,
+                'message' => 'Payment cancelled by customer during checkout modal',
+            ]);
+
             return response()->json(['success' => true]);
         }
 
