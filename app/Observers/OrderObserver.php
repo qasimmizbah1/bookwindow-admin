@@ -15,8 +15,11 @@ class OrderObserver
             $customerEmail = $order->email ?? ($order->customer->email ?? null);
 
             if ($customerEmail) {
-                // Aap specific status filter bhi laga sakte hain (jaise sirf 'processing', 'completed', 'cancelled' par)
-                Mail::to($customerEmail)->send(new OrderStatusUpdatedMail($order, $newStatus));
+                try {
+                    Mail::to($customerEmail)->send(new OrderStatusUpdatedMail($order, $newStatus));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("OrderObserver status email sending failed for Order #{$order->order_number}: " . $e->getMessage());
+                }
             }
         }
     }

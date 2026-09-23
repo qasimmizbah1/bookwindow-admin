@@ -733,6 +733,15 @@ class OrderResource extends Resource
                     ]),
             ])
             ->filters([
+                Tables\Filters\Filter::make('razorpay_pending')
+                    ->label('Razorpay Pending Payments')
+                    ->query(fn (Builder $query): Builder => $query
+                        ->where('payment_method', 'razorpay')
+                        ->whereIn('payment_status', ['payment_pending', 'created'])
+                        ->whereNotNull('razorpay_order_id')
+                        ->where('razorpay_order_id', '!=', '')
+                    ),
+
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         "new"=>"New",
@@ -938,6 +947,55 @@ class OrderResource extends Resource
                         ->action(function ($record, array $data) {
                             $record->update(['payment_status' => $data['payment_status']]);
                         }),
+
+                    // Verify & Recover Razorpay Payment action (Admin only)
+                    Tables\Actions\Action::make('verifyRazorpay')
+                        ->label('Verify / Recover Razorpay')
+                        ->icon('heroicon-o-arrow-path-rounded-square')
+                        ->color('warning')
+                        ->visible(fn ($record) => (auth()->user()?->isAdmin() ?? false) 
+                            && $record->payment_method === 'razorpay' 
+                            && $record->payment_status !== 'paid' 
+                            && !empty($record->razorpay_order_id))
+                        ->requiresConfirmation()
+                        ->modalHeading('Verify Razorpay Payment')
+                        ->modalDescription(fn ($record) => "Query Razorpay API to check if payment for Order #{$record->order_number} ({$record->razorpay_order_id}) has been captured?")
+                        ->action(function ($record) {
+                            $razorpayService = new \App\Services\RazorpayService();
+                            try {
+                                $payments = $razorpayService->fetchOrderPayments($record->razorpay_order_id);
+                                $paymentItems = $payments['items'] ?? [];
+                                $capturedPayment = null;
+
+                                foreach ($paymentItems as $payment) {
+                                    if (($payment['status'] ?? '') === 'captured') {
+                                        $capturedPayment = $payment;
+                                        break;
+                                    }
+                                }
+
+                                if ($capturedPayment) {
+                                    $result = $razorpayService->markOrderAsPaid($record, $capturedPayment['id'], 'manual_recovery', $capturedPayment);
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Payment Verified & Recovered!')
+                                        ->body("Order #{$record->order_number} marked as Paid. Payment ID: {$capturedPayment['id']}")
+                                        ->success()
+                                        ->send();
+                                } else {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('No Captured Payment Found')
+                                        ->body("Razorpay reported no captured payment for Order #{$record->order_number}.")
+                                        ->warning()
+                                        ->send();
+                                }
+                            } catch (\Exception $e) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Razorpay Verification Failed')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
                 ]),
             ])
             ->bulkActions([
@@ -966,6 +1024,65 @@ class OrderResource extends Resource
                                 $record->update(['status' => $data['status']]);
                             }
                         }),
+
+                    // Bulk Recover Razorpay Payments
+                    Tables\Actions\BulkAction::make('recoverRazorpayPayments')
+                        ->label('Recover Razorpay Payments')
+                        ->icon('heroicon-o-arrow-path-rounded-square')
+                        ->color('warning')
+                        ->visible(fn () => auth()->user()?->isAdmin() ?? false)
+                        ->requiresConfirmation()
+                        ->modalHeading('Recover Razorpay Payments')
+                        ->modalDescription('Query Razorpay API for all selected orders. Any orders with captured payments will be marked as Paid and moved to Processing.')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $razorpayService = new \App\Services\RazorpayService();
+                            $recovered = 0;
+                            $skipped = 0;
+                            $noPayment = 0;
+                            $errors = 0;
+
+                            foreach ($records as $record) {
+                                if ($record->payment_method !== 'razorpay' || empty($record->razorpay_order_id)) {
+                                    $skipped++;
+                                    continue;
+                                }
+
+                                if ($record->payment_status === 'paid') {
+                                    $skipped++;
+                                    continue;
+                                }
+
+                                try {
+                                    $payments = $razorpayService->fetchOrderPayments($record->razorpay_order_id);
+                                    $paymentItems = $payments['items'] ?? [];
+                                    $capturedPayment = null;
+
+                                    foreach ($paymentItems as $payment) {
+                                        if (($payment['status'] ?? '') === 'captured') {
+                                            $capturedPayment = $payment;
+                                            break;
+                                        }
+                                    }
+
+                                    if ($capturedPayment) {
+                                        $razorpayService->markOrderAsPaid($record, $capturedPayment['id'], 'manual_recovery', $capturedPayment);
+                                        $recovered++;
+                                    } else {
+                                        $noPayment++;
+                                    }
+                                } catch (\Exception $e) {
+                                    $errors++;
+                                    \Illuminate\Support\Facades\Log::error("Manual recovery failed for Order #{$record->order_number}: " . $e->getMessage());
+                                }
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Razorpay Recovery Complete')
+                                ->body("{$recovered} recovered, {$noPayment} unpaid, {$skipped} skipped, {$errors} errors.")
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }

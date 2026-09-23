@@ -81,9 +81,14 @@ class Order extends Model
 
     public function vendorItems()
     {
-    return $this->items()->where('vendor_id', $vendorId);
+        return $this->items()->where('vendor_id', $vendorId);
     }
-    
+
+    public function paymentLogs(): HasMany
+    {
+        return $this->hasMany(PaymentLog::class)->latest();
+    }
+
     /**
      * Normalize and format any phone number to standard +91 XXXXXXXXXX format.
      */

@@ -59,11 +59,15 @@ Route::middleware(['api', \Illuminate\Session\Middleware\StartSession::class])->
 Route::middleware(['api', \Illuminate\Session\Middleware\StartSession::class])->post('clear', [CartController::class, 'clear']);
 Route::post('/checkout', [CheckoutController::class, 'process']);
 Route::post('/razorpay/callback', [CheckoutController::class, 'razorpayCallback'])->name('razorpay.callback');
-Route::post('/razorpay/cancel', [CheckoutController::class, 'handlePaymentCancel'])->name('razorpay.cancel');;
+Route::post('/razorpay/webhook', [CheckoutController::class, 'razorpayWebhook'])->name('razorpay.webhook.cart');
+Route::post('/razorpay/cancel', [CheckoutController::class, 'handlePaymentCancel'])->name('razorpay.cancel');
 Route::post('/coupon/{coupon_code}', [CheckoutController::class, 'showCouponCode']);
 Route::get('/coupons', [CheckoutController::class, 'getAvailableCoupons']);
 
 });
+
+// Direct Razorpay Webhook endpoint (e.g. /api/razorpay/webhook)
+Route::post('/razorpay/webhook', [CheckoutController::class, 'razorpayWebhook'])->name('razorpay.webhook');
 
 Route::get('orders/{order_number}', [OrderApiController::class, 'show']);
 

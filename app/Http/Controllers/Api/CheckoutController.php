@@ -642,84 +642,71 @@ class CheckoutController extends Controller
         return response()->json(['success' => false], 404);
         }
 
-    // Add this new method to handle Razorpay callback
+    // Handle Razorpay callback
     public function razorpayCallback(Request $request)
     {
-
         try {
-            
             $request->validate([
-            'razorpay_order_id' => 'required',
-            'razorpay_payment_id' => 'required',
-            'razorpay_signature' => 'required'
-        ]);
+                'razorpay_order_id' => 'required|string',
+                'razorpay_payment_id' => 'required|string',
+                'razorpay_signature' => 'required|string',
+            ]);
 
-            
             $razorpayService = new RazorpayService();
 
-
-      
-
-            //$order = Order::where('razorpay_order_id', $request->razorpay_order_id)->firstOrFail();
             $order = Order::with('items')
                 ->where('razorpay_order_id', $request->razorpay_order_id)
-                ->whereIn('payment_status', ['payment_pending', 'created'])
-                ->firstOrFail();
+                ->first();
 
+            if (!$order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order not found for the given Razorpay Order ID.',
+                ], 404);
+            }
 
-            
-        if ($razorpayService->verifySignature(
-            $request->razorpay_order_id,
-            $request->razorpay_payment_id,
-            $request->razorpay_signature
-        )) {
-            $order->update([
-                'payment_status' => 'paid',
-                'status' => 'processing',
-                'razorpay_payment_id' => $request->razorpay_payment_id
-            ]);
+            // If already marked as paid (e.g. by webhook), return success immediately
+            if ($order->payment_status === 'paid') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment already verified.',
+                    'order' => $order,
+                    'order_number' => $order->order_number,
+                ]);
+            }
 
-            // Clear cart logic
-            
-            $this->sendOrderEmails($order, $request);
-        
-            
-           // $this->clearCartAndSendEmails($this->getCartFromOrder($order), $order, $request);
+            if ($razorpayService->verifySignature(
+                $request->razorpay_order_id,
+                $request->razorpay_payment_id,
+                $request->razorpay_signature
+            )) {
+                $recovery = $razorpayService->markOrderAsPaid(
+                    $order,
+                    $request->razorpay_payment_id,
+                    'callback',
+                    $request->all()
+                );
 
+                $updatedOrder = $recovery['order'] ?? $order;
 
-            // if ($order->user_id) {
-            //     $cart = Cart::where('user_id', $order->user_id)->first();
-            // } else {
-            $cart = Cart::where('session_id', $order->session_id)->first();
-            // }
-
-           if ($cart) {
-             $this->clearCartAndSendEmails($cart, $order, $request);
-             }
-
-
-             return response()->json([
-                'success' => true,
-                'order' => $order,
-                'cart' => $cart,
-            ]);
-
-
-
-             
-         } 
-         else {
-            
-            $this->handleFailedPayment($order);
-            return response()->json(['success' => false, 'message' => 'Payment verification failed'], 400);
-            
-        }
-           
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment verified successfully.',
+                    'order' => $updatedOrder,
+                    'order_number' => $updatedOrder->order_number,
+                ]);
+            } else {
+                $this->handleFailedPayment($order);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment signature verification failed.',
+                ], 400);
+            }
 
         } catch (\Exception $e) {
             Log::error('Razorpay callback error:', [
                 'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -769,33 +756,144 @@ class CheckoutController extends Controller
             return $product_price;
         }
 
-        public function razorpayWebhook(Request $request)
+    public function razorpayWebhook(Request $request)
     {
-        // Handle asynchronous payment failures via webhook
         try {
             $webhookBody = $request->getContent();
             $webhookSignature = $request->header('X-Razorpay-Signature');
-            
+
             $razorpayService = new RazorpayService();
-            if ($razorpayService->validateWebhookSignature($webhookBody, $webhookSignature)) {
-                $payload = json_decode($webhookBody, true);
-                
-                if ($payload['event'] === 'payment.failed') {
-                    $paymentId = $payload['payload']['payment']['entity']['id'];
-                    $order = Order::where('razorpay_payment_id', $paymentId)
-                                 ->orWhere('razorpay_order_id', $payload['payload']['payment']['entity']['order_id'])
-                                 ->first();
-                    
-                    if ($order && in_array($order->payment_status, ['payment_pending', 'created'])) {
-                        $this->handleFailedPayment($order);
+
+            // Validate webhook signature
+            if (!$razorpayService->validateWebhookSignature($webhookBody, $webhookSignature)) {
+                $razorpayService->logEvent([
+                    'event_type' => 'webhook',
+                    'status' => 'failed',
+                    'message' => 'Razorpay webhook signature verification failed or invalid secret.',
+                ]);
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid webhook signature',
+                ], 400);
+            }
+
+            $payload = json_decode($webhookBody, true);
+            $event = $payload['event'] ?? '';
+
+            $razorpayOrderId = null;
+            $razorpayPaymentId = null;
+            $amount = null;
+
+            if (isset($payload['payload']['payment']['entity'])) {
+                $paymentEntity = $payload['payload']['payment']['entity'];
+                $razorpayPaymentId = $paymentEntity['id'] ?? null;
+                $razorpayOrderId = $paymentEntity['order_id'] ?? null;
+                $amount = isset($paymentEntity['amount']) ? ($paymentEntity['amount'] / 100) : null;
+            } elseif (isset($payload['payload']['order']['entity'])) {
+                $orderEntity = $payload['payload']['order']['entity'];
+                $razorpayOrderId = $orderEntity['id'] ?? null;
+                $amount = isset($orderEntity['amount']) ? ($orderEntity['amount'] / 100) : null;
+            }
+
+            // Find order by razorpay_order_id, with fallback to notes
+            $order = null;
+            if ($razorpayOrderId) {
+                $order = Order::where('razorpay_order_id', $razorpayOrderId)->first();
+            }
+
+            // Fallback to notes if razorpay_order_id didn't match directly
+            if (!$order && isset($paymentEntity['notes']['order_id'])) {
+                $order = Order::find($paymentEntity['notes']['order_id']);
+            }
+            if (!$order && isset($paymentEntity['notes']['order_number'])) {
+                $order = Order::where('order_number', $paymentEntity['notes']['order_number'])->first();
+            }
+
+            if (!$order) {
+                $razorpayService->logEvent([
+                    'event_type' => 'webhook',
+                    'status' => 'skipped',
+                    'razorpay_order_id' => $razorpayOrderId,
+                    'razorpay_payment_id' => $razorpayPaymentId,
+                    'amount' => $amount,
+                    'message' => "Webhook received for '{$event}', but no matching order was found in the database.",
+                    'payload' => $payload,
+                ]);
+
+                return response()->json(['status' => 'ok', 'message' => 'No matching order found']);
+            }
+
+            // Handle payment.captured or order.paid
+            if (in_array($event, ['payment.captured', 'order.paid'])) {
+                // If payment id was not in entity (e.g. order.paid), fetch payments from Razorpay
+                if (!$razorpayPaymentId && $razorpayOrderId) {
+                    try {
+                        $payments = $razorpayService->fetchOrderPayments($razorpayOrderId);
+                        if (!empty($payments['items'])) {
+                            foreach ($payments['items'] as $item) {
+                                if (($item['status'] ?? '') === 'captured') {
+                                    $razorpayPaymentId = $item['id'];
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning("Could not fetch payments for Razorpay order {$razorpayOrderId}: " . $e->getMessage());
                     }
                 }
+
+                if ($razorpayPaymentId) {
+                    $razorpayService->markOrderAsPaid($order, $razorpayPaymentId, 'webhook', $payload);
+                } else {
+                    $razorpayService->logEvent([
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'event_type' => 'webhook',
+                        'status' => 'pending',
+                        'razorpay_order_id' => $razorpayOrderId,
+                        'message' => "Event '{$event}' received, but no captured payment ID could be determined.",
+                        'payload' => $payload,
+                    ]);
+                }
+            } elseif ($event === 'payment.failed') {
+                if (in_array($order->payment_status, ['payment_pending', 'created'])) {
+                    $this->handleFailedPayment($order);
+                    $razorpayService->logEvent([
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'event_type' => 'webhook',
+                        'status' => 'failed',
+                        'razorpay_order_id' => $razorpayOrderId,
+                        'razorpay_payment_id' => $razorpayPaymentId,
+                        'message' => 'Order marked as payment_cancelled due to Razorpay payment.failed webhook event.',
+                        'payload' => $payload,
+                    ]);
+                }
+            } else {
+                $razorpayService->logEvent([
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'event_type' => 'webhook',
+                    'status' => 'skipped',
+                    'razorpay_order_id' => $razorpayOrderId,
+                    'razorpay_payment_id' => $razorpayPaymentId,
+                    'message' => "Webhook received unhandled event: {$event}",
+                    'payload' => $payload,
+                ]);
             }
+
+            return response()->json(['status' => 'ok']);
         } catch (\Exception $e) {
-            Log::error('Razorpay webhook error:', ['error' => $e]);
+            Log::error('Razorpay webhook processing error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
         }
-        
-        return response()->json(['status' => 'ok']);
     }
 
     protected function handleFailedPayment(Order $order)
