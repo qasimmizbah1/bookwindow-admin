@@ -4,8 +4,10 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Order;
+use App\Models\PaymentLog;
 use App\Services\RazorpayService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SyncRazorpayOrders extends Command
@@ -92,7 +94,21 @@ class SyncRazorpayOrders extends Command
                 $paymentItems = $payments['items'] ?? [];
 
                 if (empty($paymentItems)) {
-                    $this->comment("  -> No payments initiated yet on Razorpay.");
+                    // If order is older than 60 minutes and customer never even attempted payment, mark as cancelled/abandoned
+                    $isExpired = $order->created_at && $order->created_at->lte(Carbon::now()->subMinutes(60));
+                    if ($isExpired && !$isDryRun) {
+                        $this->comment("  -> No payments attempted after 60+ minutes. Marking order as payment_cancelled.");
+                        DB::transaction(function () use ($order) {
+                            $order->update([
+                                'payment_status' => 'payment_cancelled',
+                                'status' => 'payment_cancelled',
+                                'cancelled_by' => 'customer',
+                                'cancellation_reason' => 'Payment checkout abandoned / session expired (no payment attempted)',
+                            ]);
+                        });
+                    } else {
+                        $this->comment("  -> No payments initiated yet on Razorpay.");
+                    }
                     $unpaidCount++;
                     continue;
                 }
@@ -134,22 +150,44 @@ class SyncRazorpayOrders extends Command
                         }
                     }
                 } elseif ($failedPayment) {
-                    $this->line("  -> Payment status on Razorpay is 'failed'. Order left pending or will expire.");
+                    $failDesc = $failedPayment['error_description'] ?? ($failedPayment['error_reason'] ?? 'Payment failed/declined on Razorpay');
+                    $this->line("  -> Payment status on Razorpay is 'failed': {$failDesc}");
                     $failedCount++;
 
-                    // Log failed payment so admin can see why it failed
-                    $failDesc = $failedPayment['error_description'] ?? ($failedPayment['error_reason'] ?? 'Payment failed/declined on Razorpay');
-                    $razorpayService->logEvent([
-                        'order_id' => $order->id,
-                        'order_number' => $order->order_number,
-                        'event_type' => 'cron_sync',
-                        'status' => 'failed',
-                        'razorpay_order_id' => $order->razorpay_order_id,
-                        'razorpay_payment_id' => $failedPayment['id'] ?? null,
-                        'amount' => $order->total_amount,
-                        'message' => 'Payment failed on Razorpay: ' . $failDesc,
-                        'payload' => (is_object($failedPayment) && method_exists($failedPayment, 'toArray')) ? $failedPayment->toArray() : (array)$failedPayment,
-                    ]);
+                    if ($isDryRun) {
+                        $this->warn("  -> [DRY-RUN] Would mark Order #{$order->order_number} as PAYMENT_CANCELLED.");
+                    } else {
+                        // Mark order as payment_cancelled so it is NOT checked again in subsequent cron runs
+                        DB::transaction(function () use ($order, $failDesc) {
+                            $order->update([
+                                'payment_status' => 'payment_cancelled',
+                                'status' => 'payment_cancelled',
+                                'cancelled_by' => 'payment_failed',
+                                'cancellation_reason' => 'Payment failed on Razorpay: ' . $failDesc,
+                            ]);
+                        });
+
+                        // Avoid logging duplicate failed entries in payment_logs for the same payment ID
+                        $paymentId = $failedPayment['id'] ?? null;
+                        $alreadyLogged = $paymentId ? PaymentLog::where('order_id', $order->id)
+                            ->where('razorpay_payment_id', $paymentId)
+                            ->where('status', 'failed')
+                            ->exists() : false;
+
+                        if (!$alreadyLogged) {
+                            $razorpayService->logEvent([
+                                'order_id' => $order->id,
+                                'order_number' => $order->order_number,
+                                'event_type' => 'cron_sync',
+                                'status' => 'failed',
+                                'razorpay_order_id' => $order->razorpay_order_id,
+                                'razorpay_payment_id' => $paymentId,
+                                'amount' => $order->total_amount,
+                                'message' => 'Payment failed on Razorpay: ' . $failDesc,
+                                'payload' => (is_object($failedPayment) && method_exists($failedPayment, 'toArray')) ? $failedPayment->toArray() : (array)$failedPayment,
+                            ]);
+                        }
+                    }
                 } else {
                     $this->line("  -> Payment exists but not captured yet (authorized / created).");
                     $unpaidCount++;
