@@ -195,8 +195,14 @@ class RazorpayService
      * Centralized, idempotent order recovery / mark as paid method.
      * Safe across: Callback, Webhook, Cron Sync, and Admin Action.
      */
-    public function markOrderAsPaid(Order $order, string $paymentId, string $source, ?array $rawPayload = null): array
+    public function markOrderAsPaid(Order $order, string $paymentId, string $source, $rawPayload = null): array
     {
+        if (is_object($rawPayload) && method_exists($rawPayload, 'toArray')) {
+            $rawPayload = $rawPayload->toArray();
+        } elseif (is_object($rawPayload)) {
+            $rawPayload = (array)$rawPayload;
+        }
+
         return DB::transaction(function () use ($order, $paymentId, $source, $rawPayload) {
             // Lock order record to prevent race conditions
             $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();

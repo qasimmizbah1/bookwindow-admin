@@ -126,7 +126,11 @@ class SyncRazorpayOrders extends Command
                         $this->warn("  -> [DRY-RUN] Would mark Order #{$order->order_number} as PAID.");
                         $recoveredCount++;
                     } else {
-                        $result = $razorpayService->markOrderAsPaid($order, $paymentId, 'cron_sync', $capturedPayment);
+                        $payloadArray = is_object($capturedPayment) && method_exists($capturedPayment, 'toArray')
+                            ? $capturedPayment->toArray()
+                            : (array)$capturedPayment;
+
+                        $result = $razorpayService->markOrderAsPaid($order, $paymentId, 'cron_sync', $payloadArray);
 
                         if ($result['success']) {
                             $this->info("  -> SUCCESS: Order #{$order->order_number} marked as PAID and PROCESSING.");
