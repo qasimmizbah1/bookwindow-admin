@@ -174,10 +174,19 @@
         </table>
 
         <div class="section-title">Products Ordered From Your Store</div>
+        @php
+            $appUrl = config('app.url') ?: env('APP_URL');
+            if (empty($appUrl) || str_contains($appUrl, '127.0.0.1') || str_contains($appUrl, 'localhost')) {
+                $mediaBaseUrl = 'https://admin.bookwindow.in';
+            } else {
+                $mediaBaseUrl = rtrim($appUrl, '/');
+            }
+        @endphp
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th width="40" style="text-align: center;">#</th>
+                    <th width="50" style="text-align: center;">Image</th>
                     <th>Product</th>
                     <th style="text-align: center;">Qty</th>
                     <th style="text-align: right;">Unit Price</th>
@@ -189,13 +198,32 @@
                 @php
                     $productName = $item->product ? $item->product->name : ($item->product_name ?? 'Product #' . $item->product_id);
                     $subtotal = ($item->quantity ?? 1) * ($item->price ?? 0);
+                    $rawImage = !empty($item->product_image) ? $item->product_image : ($item->product?->image ?? null);
+                    $imgSrc = null;
+
+                    if (!empty($rawImage)) {
+                        if (str_starts_with($rawImage, 'http://') || str_starts_with($rawImage, 'https://')) {
+                            $imgSrc = $rawImage;
+                        } else {
+                            $cleanPath = ltrim($rawImage, '/');
+                            $cleanPath = preg_replace('#^(storage/app/public/|app/public/|storage/)#', '', $cleanPath);
+                            $imgSrc = $mediaBaseUrl . '/storage/app/public/' . $cleanPath;
+                        }
+                    }
                 @endphp
                 <tr>
-                    <td>{{ $loop->iteration }}</td>
-                    <td><strong>{{ $productName }}</strong></td>
-                    <td style="text-align: center;">{{ $item->quantity ?? 1 }}</td>
-                    <td style="text-align: right;">₹{{ number_format($item->price ?? 0, 2) }}</td>
-                    <td style="text-align: right; font-weight: 600;">₹{{ number_format($subtotal, 2) }}</td>
+                    <td style="text-align: center; vertical-align: middle;">{{ $loop->iteration }}</td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        @if(!empty($imgSrc))
+                            <img src="{{ $imgSrc }}" alt="{{ $productName }}" width="45" height="45" style="width: 45px; height: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0; display: block; margin: 0 auto;">
+                        @else
+                            <div style="width: 45px; height: 45px; background-color: #f1f5f9; border-radius: 4px; border: 1px solid #e2e8f0; text-align: center; line-height: 45px; font-size: 18px; margin: 0 auto;">📖</div>
+                        @endif
+                    </td>
+                    <td style="vertical-align: middle;"><strong>{{ $productName }}</strong></td>
+                    <td style="text-align: center; vertical-align: middle;">{{ $item->quantity ?? 1 }}</td>
+                    <td style="text-align: right; vertical-align: middle;">₹{{ number_format($item->price ?? 0, 2) }}</td>
+                    <td style="text-align: right; font-weight: 600; vertical-align: middle;">₹{{ number_format($subtotal, 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
