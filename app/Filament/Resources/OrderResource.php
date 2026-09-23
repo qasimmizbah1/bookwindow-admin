@@ -57,12 +57,12 @@ class OrderResource extends Resource
             if ($vendor) {
                 return (string) static::getModel()::whereHas('items', function ($q) use ($vendor) {
                     $q->where('vendor_id', $vendor->id);
-                })->whereIn('status', ['new', 'pending', 'processing'])->count();
+                })->whereIn('status', ['pending', 'processing'])->count();
             }
             return '0';
         }
 
-        return (string) static::getModel()::where('status', '=', 'pending')->count();
+        return (string) static::getModel()::whereIn('status', ['pending', 'processing'])->count();
     }
 
     public static function getEloquentQuery(): Builder
