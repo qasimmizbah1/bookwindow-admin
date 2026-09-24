@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
@@ -35,36 +36,59 @@ class CartController extends Controller
 
 
              $product = Product::visibleToCustomers()->findOrFail($request->product_id);
-                if (auth()->check()) {
-                $cart = Cart::firstOrCreate(
-                ['user_id' => auth()->id()],
-                ['session_id' => $request->session_id]
-                );
-                $this->updateOrCreateCartItem($cart, $product, $request->quantity);
 
-                // Also update session for consistency
-                $this->updateSessionCart($product, $request->quantity);
-                }
-                else {
-                // First try to find cart by session_id
-                $cart = Cart::firstOrCreate(
-                ['session_id' => $request->session_id],
-                ['user_id' => null]
-                );
+             // Check if user is logged in via customer guard, api guard, default web guard, or request user_id
+             $customerId = auth('customer')->id() 
+                 ?? (auth('api')->id() 
+                 ?? (auth()->id() 
+                 ?? $request->user_id 
+                 ?? $request->customer_id));
 
-                $this->updateOrCreateCartItem($cart, $product, $request->quantity);
+             if ($customerId) {
+                 $cart = Cart::firstOrCreate(
+                     ['user_id' => $customerId],
+                     ['session_id' => $request->session_id]
+                 );
 
-                // Update session cart
-                $this->updateSessionCart($product, $request->quantity);
-                }
-                return response()->json([
-                'message' => 'Product added to cart',
-                'cart' => $cart->load('items.product'),
-                'total_products_count' => $cart->items->sum('quantity'), 
-                'session_id' => $request->session_id // For debugging
-                ])->withHeaders([
-                'Access-Control-Allow-Credentials' => 'true'
-                ]);
+                 if ($request->session_id && $cart->session_id !== $request->session_id) {
+                     $cart->session_id = $request->session_id;
+                 }
+
+                 $customer = Customer::find($customerId);
+                 if ($customer) {
+                     $cart->customer_name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+                     $cart->customer_email = $customer->email;
+                     $cart->customer_phone = $customer->phone;
+                 }
+
+                 $cart->status = 'active';
+                 $cart->ensureRecoveryToken();
+                 $cart->save();
+
+                 $this->updateOrCreateCartItem($cart, $product, $request->quantity);
+                 $this->updateSessionCart($product, $request->quantity);
+             } else {
+                 $cart = Cart::firstOrCreate(
+                     ['session_id' => $request->session_id],
+                     ['user_id' => null]
+                 );
+
+                 $cart->status = 'active';
+                 $cart->ensureRecoveryToken();
+                 $cart->save();
+
+                 $this->updateOrCreateCartItem($cart, $product, $request->quantity);
+                 $this->updateSessionCart($product, $request->quantity);
+             }
+
+             return response()->json([
+                 'message' => 'Product added to cart',
+                 'cart' => $cart->load('items.product'),
+                 'total_products_count' => $cart->items->sum('quantity'), 
+                 'session_id' => $request->session_id
+             ])->withHeaders([
+                 'Access-Control-Allow-Credentials' => 'true'
+             ]);
 
         // $product = Product::find($request->product_id);
         // $cart = session()->get('cart', []);
@@ -288,6 +312,135 @@ return response()->json(['success' => false, 'message' => 'Cart not found']);
                 'message' => 'Cart not found'
             ]);
     }
-    
 
+    /**
+     * Auto-sync customer contact info during checkout (for guest and authenticated users)
+     */
+    public function syncCustomer(Request $request)
+    {
+        try {
+            $request->validate([
+                'session_id' => 'required|string',
+                'customer_name' => 'nullable|string|max:150',
+                'first_name' => 'nullable|string|max:100',
+                'last_name' => 'nullable|string|max:100',
+                'email' => 'nullable|email|max:150',
+                'phone' => 'nullable|string|max:25',
+            ]);
+
+            $cart = Cart::where('session_id', $request->session_id)->first();
+            if (!$cart) {
+                return response()->json(['success' => false, 'message' => 'Cart not found'], 404);
+            }
+
+            $name = $request->customer_name;
+            if (empty($name) && ($request->first_name || $request->last_name)) {
+                $name = trim(($request->first_name ?? '') . ' ' . ($request->last_name ?? ''));
+            }
+
+            $updates = [];
+            if (!empty($name)) {
+                $updates['customer_name'] = $name;
+            }
+            if (!empty($request->email)) {
+                $updates['customer_email'] = $request->email;
+            }
+            if (!empty($request->phone)) {
+                $cleanPhone = preg_replace('/\D/', '', (string) $request->phone);
+                if (str_starts_with($cleanPhone, '91') && strlen($cleanPhone) > 10) {
+                    $cleanPhone = substr($cleanPhone, 2);
+                } elseif (str_starts_with($cleanPhone, '0') && strlen($cleanPhone) > 10) {
+                    $cleanPhone = substr($cleanPhone, 1);
+                }
+                $updates['customer_phone'] = $cleanPhone;
+            }
+
+            if (!empty($updates)) {
+                $cart->update($updates);
+            }
+
+            return response()->json([
+                'success' => true,
+                'cart_id' => $cart->id,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Restore abandoned cart when customer visits recovery link
+     */
+    public function recover(Request $request)
+    {
+        try {
+            $request->validate([
+                'token' => 'required|string',
+                'session_id' => 'required|string',
+            ]);
+
+            $cart = Cart::with(['items.product', 'customer'])
+                ->where('recovery_token', $request->token)
+                ->first();
+
+            if (!$cart) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired recovery link.',
+                ], 404);
+            }
+
+            $targetSessionId = $request->session_id;
+
+            // If visitor is on a different session ID, point the cart to the visitor's current session
+            $targetCart = Cart::where('session_id', $targetSessionId)->first();
+
+            if ($targetCart && $targetCart->id !== $cart->id) {
+                // Merge items into current cart
+                foreach ($cart->items as $item) {
+                    $existing = $targetCart->items()->where('product_id', $item->product_id)->first();
+                    if ($existing) {
+                        $existing->update(['quantity' => max($existing->quantity, $item->quantity)]);
+                    } else {
+                        $targetCart->items()->create([
+                            'product_id' => $item->product_id,
+                            'quantity' => $item->quantity,
+                            'price' => $item->price,
+                            'image' => $item->image,
+                            'product_weight' => $item->product_weight,
+                        ]);
+                    }
+                }
+
+                $targetCart->update([
+                    'customer_name' => $targetCart->customer_name ?: $cart->customer_name,
+                    'customer_email' => $targetCart->customer_email ?: $cart->customer_email,
+                    'customer_phone' => $targetCart->customer_phone ?: $cart->customer_phone,
+                    'status' => 'active',
+                ]);
+
+                $activeCart = $targetCart;
+            } else {
+                $cart->update([
+                    'session_id' => $targetSessionId,
+                    'status' => 'active',
+                ]);
+                $activeCart = $cart;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cart successfully restored!',
+                'cart' => $activeCart->load('items.product'),
+                'customer' => [
+                    'name' => $activeCart->customer_name ?: ($activeCart->customer ? trim(($activeCart->customer->first_name ?? '') . ' ' . ($activeCart->customer->last_name ?? '')) : null),
+                    'email' => $activeCart->customer_email ?: $activeCart->customer?->email,
+                    'phone' => $activeCart->customer_phone ?: $activeCart->customer?->phone,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
 }
+

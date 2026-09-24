@@ -57,7 +57,12 @@ class Order extends Model
     }
     public function customername()
     {
-    return $this->belongsTo(Customer::class, 'user_id');
+        return $this->belongsTo(Customer::class, 'user_id');
+    }
+
+    public function recoveredCarts(): HasMany
+    {
+        return $this->hasMany(Cart::class, 'recovered_order_id');
     }
     public function items(): HasMany
     {

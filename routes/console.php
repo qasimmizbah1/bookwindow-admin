@@ -13,3 +13,10 @@ Schedule::command('orders:sync-razorpay')
     ->everyTenMinutes()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Check and update abandoned carts every 15 minutes safely
+Schedule::command('carts:check-abandoned')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground();
+

@@ -61,6 +61,8 @@ Route::post('/checkout', [CheckoutController::class, 'process']);
 Route::post('/razorpay/callback', [CheckoutController::class, 'razorpayCallback'])->name('razorpay.callback');
 Route::post('/razorpay/webhook', [CheckoutController::class, 'razorpayWebhook'])->name('razorpay.webhook.cart');
 Route::post('/razorpay/cancel', [CheckoutController::class, 'handlePaymentCancel'])->name('razorpay.cancel');
+Route::post('/sync-customer', [CartController::class, 'syncCustomer']);
+Route::post('/recover', [CartController::class, 'recover']);
 Route::post('/coupon/{coupon_code}', [CheckoutController::class, 'showCouponCode']);
 Route::get('/coupons', [CheckoutController::class, 'getAvailableCoupons']);
 

@@ -317,15 +317,38 @@ class CheckoutController extends Controller
         }
     }
 
-            protected function clearCartAndSendEmails($cart, $order, $request)
-            {
-            // Clear the cart
+    protected function clearCartAndSendEmails($cart, $order, $request)
+    {
+        try {
+            // Clear the cart items
             CartItem::where('cart_id', $cart->id)->delete();
-            $cart->delete();
 
-            // Send emails
-            $this->sendOrderEmails($order, $request);
+            // If the cart was abandoned or recovered, update its status instead of deleting
+            if ($cart->status === 'abandoned' || ($request && $request->filled('recovery_token')) || !empty($cart->recovery_token)) {
+                $cart->update([
+                    'status' => 'recovered',
+                    'recovered_at' => now(),
+                    'recovered_order_id' => $order->id,
+                ]);
+            } else {
+                $cart->delete();
             }
+
+            // Also ensure any original cart matching recovery_token is marked recovered
+            if ($request && $request->filled('recovery_token')) {
+                Cart::where('recovery_token', $request->recovery_token)->update([
+                    'status' => 'recovered',
+                    'recovered_at' => now(),
+                    'recovered_order_id' => $order->id,
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Error resolving cart recovery: ' . $e->getMessage());
+        }
+
+        // Send emails
+        $this->sendOrderEmails($order, $request);
+    }
 
 
     protected function sendOrderEmails(Order $order, $request)

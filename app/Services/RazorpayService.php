@@ -292,7 +292,15 @@ class RazorpayService
 
             if ($cart) {
                 CartItem::where('cart_id', $cart->id)->delete();
-                $cart->delete();
+                if ($cart->status === 'abandoned' || !empty($cart->recovery_token)) {
+                    $cart->update([
+                        'status' => 'recovered',
+                        'recovered_at' => now(),
+                        'recovered_order_id' => $order->id,
+                    ]);
+                } else {
+                    $cart->delete();
+                }
             }
         } catch (\Exception $e) {
             Log::warning('Error clearing cart for order #' . $order->order_number . ': ' . $e->getMessage());
