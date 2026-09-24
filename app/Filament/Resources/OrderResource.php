@@ -101,73 +101,57 @@ class OrderResource extends Resource
                     ->tabs([
                         Tab::make('Customer & Order Info')
                             ->schema([
-                                // Customer Information Section - Show as view only
+                                // Customer Information Section
                                 Section::make('Customer Information')
                                     ->schema([
                                         Grid::make(2)
                                             ->schema([
-                                                Placeholder::make('full_name')
-                                                    ->label('Full Name')
-                                                    ->content(function ($record) {
-                                                        return ($record->first_name ?? '') . ' ' . ($record->last_name ?? '');
-                                                    }),
-                                                
-                                                Placeholder::make('email')
+                                                TextInput::make('first_name')
+                                                    ->label('First Name')
+                                                    ->maxLength(100),
+
+                                                TextInput::make('last_name')
+                                                    ->label('Last Name')
+                                                    ->maxLength(100),
+
+                                                TextInput::make('email')
                                                     ->label('Email')
-                                                    ->content(function ($record) {
-                                                        return $record->email ?? 'N/A';
-                                                    }),
-                                                
-                                                Placeholder::make('customer_phone')
-                                                    ->label('Phone Number')
-                                                    ->content(function ($record) {
-                                                        return $record?->formatted_phone ?? 'N/A';
-                                                    }),
+                                                    ->email()
+                                                    ->maxLength(150),
+
+                                                TextInput::make('customer_phone')
+                                                    ->label('Phone Number / Mobile')
+                                                    ->tel()
+                                                    ->placeholder('e.g. 9876543210')
+                                                    ->maxLength(20),
                                             ]),
                                     ]),
 
-                                // Shipping Address Section - Show as view only
+                                // Shipping Address Section
                                 Section::make('Shipping Address')
                                     ->schema([
                                         Grid::make(2)
                                             ->schema([
-                                                Placeholder::make('address')
+                                                TextInput::make('address')
                                                     ->label('Address Line 1')
-                                                    ->content(function ($record) {
-                                                        return $record->address ?? 'N/A';
-                                                    })
                                                     ->columnSpanFull(),
-                                                
-                                                Placeholder::make('address_2')
+
+                                                TextInput::make('address_2')
                                                     ->label('Address Line 2')
-                                                    ->content(function ($record) {
-                                                        return $record->address_2 ?? 'N/A';
-                                                    })
                                                     ->columnSpanFull(),
-                                                
-                                                Placeholder::make('city')
-                                                    ->label('City')
-                                                    ->content(function ($record) {
-                                                        return $record->city ?? 'N/A';
-                                                    }),
-                                                
-                                                Placeholder::make('state')
-                                                    ->label('State/Province')
-                                                    ->content(function ($record) {
-                                                        return $record->state ?? 'N/A';
-                                                    }),
-                                                
-                                                Placeholder::make('zip_code')
-                                                    ->label('Postal Code')
-                                                    ->content(function ($record) {
-                                                        return $record->zip_code ?? 'N/A';
-                                                    }),
-                                                
-                                                Placeholder::make('country')
+
+                                                TextInput::make('city')
+                                                    ->label('City'),
+
+                                                TextInput::make('state')
+                                                    ->label('State/Province'),
+
+                                                TextInput::make('zip_code')
+                                                    ->label('Postal Code / PIN'),
+
+                                                TextInput::make('country')
                                                     ->label('Country')
-                                                    ->content(function ($record) {
-                                                        return $record->country ?? 'N/A';
-                                                    }),
+                                                    ->default('India'),
                                             ]),
                                     ]),
 
@@ -811,6 +795,48 @@ class OrderResource extends Resource
                     Tables\Actions\DeleteAction::make()
                         ->label('Delete')
                         ->visible(fn () => auth()->user()?->isAdmin() ?? false),
+
+                    // Quick action to edit shipping address & phone
+                    Tables\Actions\Action::make('editAddress')
+                        ->label('Edit Address & Phone')
+                        ->icon('heroicon-o-map-pin')
+                        ->color('warning')
+                        ->mountUsing(function (Forms\ComponentContainer $form, $record) {
+                            $form->fill([
+                                'first_name' => $record->first_name,
+                                'last_name' => $record->last_name,
+                                'customer_phone' => $record->customer_phone,
+                                'address' => $record->address,
+                                'address_2' => $record->address_2,
+                                'city' => $record->city,
+                                'state' => $record->state,
+                                'zip_code' => $record->zip_code,
+                                'country' => $record->country ?? 'India',
+                            ]);
+                        })
+                        ->form([
+                            Grid::make(2)
+                                ->schema([
+                                    TextInput::make('first_name')->label('First Name')->maxLength(100),
+                                    TextInput::make('last_name')->label('Last Name')->maxLength(100),
+                                    TextInput::make('customer_phone')->label('Phone Number / Mobile')->tel()->maxLength(20)->columnSpanFull(),
+                                    TextInput::make('address')->label('Address Line 1')->columnSpanFull(),
+                                    TextInput::make('address_2')->label('Address Line 2')->columnSpanFull(),
+                                    TextInput::make('city')->label('City'),
+                                    TextInput::make('state')->label('State/Province'),
+                                    TextInput::make('zip_code')->label('Postal Code / PIN'),
+                                    TextInput::make('country')->label('Country')->default('India'),
+                                ]),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $record->update($data);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Customer address & phone updated successfully')
+                                ->success()
+                                ->send();
+                        }),
+
                     // Custom action to update status quickly
                     Tables\Actions\Action::make('updateStatus')
                         ->label('Update Status')
