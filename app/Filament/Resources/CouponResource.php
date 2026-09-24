@@ -27,7 +27,7 @@ class CouponResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('coupons') ?? false;
     }
 
     public static function getNavigationBadge(): ?string

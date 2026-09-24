@@ -23,7 +23,7 @@ class StateResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('states') ?? false;
     }
 
     public static function form(Form $form): Form

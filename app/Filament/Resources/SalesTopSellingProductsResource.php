@@ -28,7 +28,7 @@ class SalesTopSellingProductsResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('sales_top_selling') ?? false;
     }
 
      public static function canCreate(): bool { return false; }

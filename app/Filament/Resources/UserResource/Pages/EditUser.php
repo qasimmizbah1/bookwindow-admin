@@ -68,9 +68,9 @@ class EditUser extends EditRecord
                     Vendor::create($vendorData);
                 }
             }
-            
-            unset($data['vendor']);
         }
+        
+        unset($data['vendor']);
         
         return $data;
     }

@@ -27,7 +27,7 @@ class SalesByProductsAndCategoryResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('sales_by_product_category') ?? false;
     }
 
     public static function table(Table $table): Table

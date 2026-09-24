@@ -26,7 +26,7 @@ class CityResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('cities') ?? false;
     }
 
 

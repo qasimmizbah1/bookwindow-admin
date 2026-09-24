@@ -35,7 +35,7 @@ class SalesOrdersResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('sales_orders') ?? false;
     }
 
     public static function canCreate(): bool { return false; }

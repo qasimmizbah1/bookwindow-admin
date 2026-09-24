@@ -33,7 +33,7 @@ class CmsPostResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('cms_posts') ?? false;
     }
     public static function getNavigationBadge(): ?string
     {

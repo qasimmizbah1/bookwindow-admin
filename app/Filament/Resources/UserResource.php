@@ -44,6 +44,7 @@ class UserResource extends Resource
                         ->options([
                             'admin' => 'Admin',
                             'vendor' => 'Vendor',
+                            'team' => 'Team Member',
                         ])
                         ->required()
                         ->live()
@@ -51,16 +52,56 @@ class UserResource extends Resource
                     
                     Forms\Components\TextInput::make('password')
                         ->password()
-                        ->required(fn ($record) => $record === null)
+                        ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
+                        ->dehydrated(fn ($state) => filled($state))
+                        ->required(fn (string $context): bool => $context === 'create')
                         ->maxLength(255)
-                        ->dehydrateStateUsing(fn ($state) => !empty($state) ? bcrypt($state) : null)
-                        ->visibleOn('create'),
+                        ->helperText(fn (string $context): ?string => $context === 'edit' ? 'Leave blank to keep existing password' : null),
                     
                     Forms\Components\Toggle::make('is_active')
                         ->label('Active')
                         ->default(true)
                         ->required(),
                 ])->columns(2),
+
+            // 🔥 Team Member Section-Level Access Control
+            Forms\Components\Section::make('Team Member Access & Permissions')
+                ->description('Select which sections and modules this team member is allowed to view and access in the admin panel.')
+                ->schema([
+                    Forms\Components\CheckboxList::make('permissions')
+                        ->label('Allowed Sections / Modules')
+                        ->options([
+                            'categories' => 'Categories',
+                            'cities' => 'Cities Management',
+                            'cms_posts' => 'CMS Blog Posts',
+                            'cms_categories' => 'CMS Categories',
+                            'cms_pages' => 'CMS Pages',
+                            'contact_page' => 'Contact Page Management',
+                            'coupons' => 'Coupons & Discounts',
+                            'customers' => 'Customers Management',
+                            'global_settings' => 'Global Store Settings',
+                            'home_page' => 'Home Page Management',
+                            'news' => 'News & Updates',
+                            'news_categories' => 'News Categories',
+                            'orders' => 'Orders Management',
+                            'payment_logs' => 'Payment Logs',
+                            'products' => 'Products Management',
+                            'production' => 'Publication',
+                            'sales_analytics' => 'Sales Analytics',
+                            'sales_by_product_category' => 'Sales by products and category',
+                            'sales_forecast' => 'Sales Forecast',
+                            'sales_orders' => 'Sales Order By Payment',
+                            'shipping_methods' => 'Shipping Methods',
+                            'states' => 'States Management',
+                            'sales_top_selling' => 'Top Selling Products',
+                        ])
+                        ->columns(2)
+                        ->gridDirection('row')
+                        ->bulkToggleable()
+                        ->helperText('Team members will ONLY see and access the sections selected above. User Management and Team settings are strictly restricted to Admin.')
+                        ->columnSpanFull(),
+                ])
+                ->visible(fn (Forms\Get $get) => $get('role') === 'team'),
             
             // 🔥 Account Status & Dynamic Commission
             Forms\Components\Section::make('Vendor Account & Commission')
@@ -243,14 +284,32 @@ class UserResource extends Resource
                     ->color(fn (string $state): string => match ($state) {
                         'admin' => 'danger',
                         'vendor' => 'success',
+                        'team' => 'info',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'admin' => 'Admin',
                         'vendor' => 'Vendor',
-                        default => $state,
+                        'team' => 'Team Member',
+                        default => ucfirst($state),
                     })
                     ->sortable(),
+
+                // 🔥 Team Permissions Count / Status
+                Tables\Columns\TextColumn::make('permissions')
+                    ->label('Access Level')
+                    ->badge()
+                    ->color(fn ($record) => $record->isAdmin() ? 'danger' : ($record->isTeam() ? 'info' : 'success'))
+                    ->getStateUsing(function ($record) {
+                        if ($record->isAdmin()) return 'Full Admin';
+                        if ($record->isVendor()) return 'Vendor Store';
+                        if ($record->isTeam()) {
+                            $count = is_array($record->permissions) ? count($record->permissions) : 0;
+                            return "{$count} Allowed Sections";
+                        }
+                        return '-';
+                    })
+                    ->toggleable(isToggledHiddenByDefault: false),
                 
                 // 🔥 Vendor Name
                 Tables\Columns\TextColumn::make('vendor.vendor_name')
@@ -311,6 +370,7 @@ class UserResource extends Resource
                     ->options([
                         'admin' => 'Admin',
                         'vendor' => 'Vendor',
+                        'team' => 'Team Member',
                     ])
                     ->placeholder('All Roles'),
 

@@ -26,7 +26,7 @@ class GlobalSettingResource extends Resource
      */
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('global_settings') ?? false;
     }
 
     public static function canCreate(): bool

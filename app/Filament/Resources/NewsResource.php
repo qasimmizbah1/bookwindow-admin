@@ -28,7 +28,7 @@ class NewsResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('news') ?? false;
     }
     public static function form(Form $form): Form
     {

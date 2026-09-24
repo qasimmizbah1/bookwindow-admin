@@ -35,7 +35,7 @@ class CustomerResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('customers') ?? false;
     }
 
     public static function getNavigationBadge(): ?string

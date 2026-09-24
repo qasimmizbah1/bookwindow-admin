@@ -31,7 +31,7 @@ class SalesAnalyticsResource extends Resource
     
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('sales_analytics') ?? false;
     }
     
     public static function getPages(): array

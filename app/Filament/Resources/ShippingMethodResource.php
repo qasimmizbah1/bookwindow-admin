@@ -23,7 +23,7 @@ class ShippingMethodResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('shipping_methods') ?? false;
     }
 
 

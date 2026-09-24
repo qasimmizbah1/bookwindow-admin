@@ -29,7 +29,7 @@ class HomePageResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('home_page') ?? false;
     }
 
     public static function form(Form $form): Form

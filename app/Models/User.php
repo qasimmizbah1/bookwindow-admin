@@ -27,6 +27,7 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'is_active',
         'role',
+        'permissions',
     ];
 
     /**
@@ -50,6 +51,7 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'permissions' => 'array',
         ];
     }
 
@@ -73,14 +75,59 @@ class User extends Authenticatable implements FilamentUser
 
        
 
-        public function isAdmin()
+        public function isAdmin(): bool
         {
-        return $this->role === 'admin';
+            return $this->role === 'admin';
         }
 
-        public function isVendor()
+        public function isVendor(): bool
         {
-        return $this->role === 'vendor';
+            return $this->role === 'vendor';
+        }
+
+        public function isTeam(): bool
+        {
+            return $this->role === 'team';
+        }
+
+        /**
+         * Check if user has permission to access a section/resource
+         */
+        public function hasPermission(string $permission): bool
+        {
+            if ($this->isAdmin()) {
+                return true;
+            }
+
+            if (! $this->isTeam()) {
+                return false;
+            }
+
+            $perms = $this->permissions ?? [];
+            return in_array($permission, $perms, true);
+        }
+
+        /**
+         * Check if user has any of the given permissions
+         */
+        public function hasAnyPermission(array $permissions): bool
+        {
+            if ($this->isAdmin()) {
+                return true;
+            }
+
+            if (! $this->isTeam()) {
+                return false;
+            }
+
+            $perms = $this->permissions ?? [];
+            foreach ($permissions as $p) {
+                if (in_array($p, $perms, true)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Relationship to vendor profile if you still want separate vendor details
@@ -111,6 +158,11 @@ class User extends Authenticatable implements FilamentUser
         // 3. Vendor can only access if active AND approved
         if ($this->isVendor()) {
             return $this->vendor && $this->vendor->approval_status === 'approved';
+        }
+
+        // 4. Team member can access if active
+        if ($this->isTeam()) {
+            return true;
         }
 
         return false;

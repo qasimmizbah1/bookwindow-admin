@@ -43,6 +43,15 @@ class OrderResource extends Resource
 
     protected static ?string $navigationGroup = "Shop";
 
+    // Access control: Admin, Vendor, or Team with 'orders' permission
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+        if (! $user) return false;
+        if ($user->isAdmin() || $user->isVendor()) return true;
+        return $user->hasPermission('orders');
+    }
+
     // Disable the create action globally
     public static function canCreate(): bool
     {

@@ -31,7 +31,7 @@ class CmsPageResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('cms_pages') ?? false;
     }
     
     public static function getNavigationBadge(): ?string

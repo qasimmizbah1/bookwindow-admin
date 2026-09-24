@@ -29,6 +29,15 @@ class ProductResource extends Resource
     protected static ?string $recordTitleAttribute = "name";
     protected static ?string $navigationLabel = 'Products';
 
+    // Access control: Admin, Vendor, or Team with 'products' permission
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+        if (! $user) return false;
+        if ($user->isAdmin() || $user->isVendor()) return true;
+        return $user->hasPermission('products');
+    }
+
     public static function getNavigationBadge(): ?string
     {
         //return static::getModel()::count();

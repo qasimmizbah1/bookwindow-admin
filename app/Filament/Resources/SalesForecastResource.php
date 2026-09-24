@@ -29,7 +29,7 @@ class SalesForecastResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->hasPermission('sales_forecast') ?? false;
     }
 
     public static function table(Tables\Table $table): Tables\Table
