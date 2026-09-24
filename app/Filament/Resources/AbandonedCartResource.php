@@ -151,13 +151,18 @@ class AbandonedCartResource extends Resource
                     ->label('Books in Cart')
                     ->state(function (Cart $record): string {
                         $totalQty = $record->getItemsCount();
-                        $itemCount = $record->items->count();
-                        return "{$itemCount} title(s) ({$totalQty} total qty)";
+                        $distinctTitles = $record->items->count();
+                        if ($totalQty === $distinctTitles) {
+                            return $totalQty === 1 ? '1 Book' : "{$totalQty} Books";
+                        }
+                        return "{$totalQty} Books ({$distinctTitles} Titles)";
                     })
                     ->description(function (Cart $record): string {
                         $titles = $record->items->take(2)->map(function ($item) {
                             $name = $item->product?->name ?? 'Book';
-                            return strlen($name) > 30 ? substr($name, 0, 27) . '...' : $name;
+                            $qty = (int) $item->quantity;
+                            $shortName = strlen($name) > 30 ? substr($name, 0, 27) . '...' : $name;
+                            return $qty > 1 ? "{$shortName} (x{$qty})" : $shortName;
                         })->toArray();
 
                         if ($record->items->count() > 2) {
@@ -455,10 +460,13 @@ class AbandonedCartResource extends Resource
                                     }
 
                                     $total = number_format($record->calculateTotal(), 2);
+                                    $totalQty = $record->getItemsCount();
                                     $html .= "</tbody>";
                                     $html .= "<tfoot class='bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700 font-bold'>";
                                     $html .= "<tr>";
-                                    $html .= "<td colspan='3' class='p-3 text-right text-gray-700 dark:text-gray-300'>Total Cart Value:</td>";
+                                    $html .= "<td class='p-3 text-gray-700 dark:text-gray-300'>Total Items:</td>";
+                                    $html .= "<td class='p-3 text-center text-gray-900 dark:text-white'>{$totalQty}</td>";
+                                    $html .= "<td class='p-3 text-right text-gray-700 dark:text-gray-300'>Total Cart Value:</td>";
                                     $html .= "<td class='p-3 text-right text-base text-red-600 dark:text-red-400'>₹{$total}</td>";
                                     $html .= "</tr>";
                                     $html .= "</tfoot>";
