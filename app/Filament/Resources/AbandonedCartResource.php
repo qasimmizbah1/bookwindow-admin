@@ -99,10 +99,10 @@ class AbandonedCartResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('customer')
+                Tables\Columns\TextColumn::make('customer_info')
                     ->label('Customer')
                     ->html()
-                    ->formatStateUsing(function (Cart $record): string {
+                    ->state(function (Cart $record): string {
                         $name = e($record->getEffectiveCustomerName());
                         $type = $record->user_id ? 'Registered' : 'Guest';
                         $phone = $record->getEffectiveCustomerPhone();
