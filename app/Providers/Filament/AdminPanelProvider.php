@@ -10,6 +10,7 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -41,6 +42,18 @@ class AdminPanelProvider extends PanelProvider
             \Biostate\FilamentMenuBuilder\FilamentMenuBuilderPlugin::make(),
         ])
             ->font(family:'Poppins')
+            ->navigationGroups([
+                NavigationGroup::make('Shop'),
+                NavigationGroup::make('Shipping'),
+                NavigationGroup::make('Payments'),
+                NavigationGroup::make('Reports'),
+                NavigationGroup::make('Settings'),
+                NavigationGroup::make('User Management'),
+                // NavigationGroup::make('Locations'),
+                NavigationGroup::make('Pages'),
+                NavigationGroup::make('Blog'),
+                NavigationGroup::make('News Management'),
+            ])
             ->renderHook(
                 PanelsRenderHook::HEAD_START,
                 fn (): HtmlString => new HtmlString('<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">' . PHP_EOL)

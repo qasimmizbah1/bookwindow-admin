@@ -6,7 +6,27 @@ use Illuminate\Database\Eloquent\Model;
 
 class ShippingMethod extends Model
 {
-    protected $fillable = ['name', 'code', 'price', 'is_active','updated_by'];
+    protected $fillable = [
+        'name',
+        'code',
+        'delivery_time',
+        'description',
+        'price',
+        'calculation_type',
+        'is_free_shipping_eligible',
+        'is_cod_allowed',
+        'is_active',
+        'sort_order',
+        'updated_by',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'is_free_shipping_eligible' => 'boolean',
+        'is_cod_allowed' => 'boolean',
+        'is_active' => 'boolean',
+        'sort_order' => 'integer',
+    ];
 
     protected static function booted(): void
     {

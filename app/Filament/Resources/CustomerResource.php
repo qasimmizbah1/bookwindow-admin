@@ -70,6 +70,8 @@ class CustomerResource extends Resource
                 ->label( label: 'Date of Birth'),
                 Forms\Components\TextInput::make( name: 'city')
                 ->label( label: 'City'),
+                Forms\Components\TextInput::make( name: 'district')
+                ->label( label: 'District'),
                 Forms\Components\TextInput::make( name: 'zip_code')
                 ->label( label: 'Zip Code'),
                 Forms\Components\TextInput::make( name: 'state')

@@ -250,6 +250,7 @@ class AuthController extends Controller
                     'last_name' => $validated['last_name'],
                     'phone' => $cleanPhone ?? $customer->phone,
                     'city' => $request['city'],
+                    'district' => $request['district'] ?? null,
                     'address' => $request['address'],
                     'address_2' => $request['address_2'],
                     'zip_code' => $request['zip_code'],

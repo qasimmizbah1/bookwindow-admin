@@ -169,6 +169,7 @@ table {
                 <span class="bold">Name:</span> {{ $order->first_name }} {{ $order->last_name }}<br>
                 <span class="bold">Address:</span> {{ $order->address }}<br>
                 <span class="bold">City:</span> {{ $order->city }}<br>
+                @if(!empty($order->district))<span class="bold">District:</span> {{ $order->district }}<br>@endif
                 <span class="bold">State:</span> {{ $order->state }}<br>
                 <span class="bold">Pin Code:</span> {{ $order->zip_code }}<br>
                 <span class="bold">Phone:</span> {{ $order->formatted_phone ?? $order->customer_phone }}<br>

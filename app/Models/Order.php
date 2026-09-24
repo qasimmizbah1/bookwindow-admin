@@ -43,6 +43,7 @@ class Order extends Model
         'admin_remark',
         'zip_code',
         'city',
+        'district',
         'state',
         'country',
         'tracking_id',

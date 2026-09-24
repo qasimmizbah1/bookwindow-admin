@@ -22,6 +22,7 @@ class Customer extends Authenticatable implements CanResetPasswordContract, JWTS
         'address',
         'zip_code',
         'city',
+        'district',
         'state',
         'country',
         'address_2',

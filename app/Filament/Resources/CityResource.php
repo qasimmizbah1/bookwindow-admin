@@ -24,9 +24,16 @@ class CityResource extends Resource
 
     protected static ?string $navigationGroup = 'Locations';
 
+    protected static bool $shouldRegisterNavigation = false;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function canViewAny(): bool
     {
-        return auth()->user()?->hasPermission('cities') ?? false;
+        return auth()->user()?->isAdmin() ?? false;
     }
 
 

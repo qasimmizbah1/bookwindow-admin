@@ -47,6 +47,9 @@ class CheckoutController extends Controller
             'shipping_method' => 'required|string',
             'address' => 'required|string',
             'address_2' => 'string|nullable',
+            'city' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
             'zip_code' => ['required', 'regex:/^\d{6}$/'],
             'coupon_code' => 'nullable|string',
             'email' => 'required_if:is_guest,true|email|nullable',
@@ -162,6 +165,7 @@ class CheckoutController extends Controller
             'last_name'=> $request->last_name,
             'zip_code' => $request->zip_code,
             'city' => $request->city,
+            'district' => $request->district,
             'state' => $request->state,
             'country' => 'India',
         ]);
@@ -251,6 +255,7 @@ class CheckoutController extends Controller
                 'last_name'=> $request->last_name,
                 'zip_code' => $request->zip_code,
                 'city' => $request->city,
+                'district' => $request->district,
                 'state' => $request->state,
                 'country' => 'India',
                 'delivery_amount'=>$request->delivery_amount,
@@ -388,6 +393,7 @@ class CheckoutController extends Controller
                     'address_2' => $request->address_2,
                     'zip_code' => $request->zip_code,
                     'city' => $request->city,
+                    'district' => $request->district,
                     'state' => $request->state,
                     'country' => 'India',
                 ]

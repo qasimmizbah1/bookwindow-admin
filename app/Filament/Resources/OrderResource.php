@@ -143,6 +143,9 @@ class OrderResource extends Resource
                                                 TextInput::make('city')
                                                     ->label('City'),
 
+                                                TextInput::make('district')
+                                                    ->label('District'),
+
                                                 TextInput::make('state')
                                                     ->label('State/Province'),
 

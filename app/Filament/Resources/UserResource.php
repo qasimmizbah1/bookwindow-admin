@@ -72,7 +72,6 @@ class UserResource extends Resource
                         ->label('Allowed Sections / Modules')
                         ->options([
                             'categories' => 'Categories',
-                            'cities' => 'Cities Management',
                             'cms_posts' => 'CMS Blog Posts',
                             'cms_categories' => 'CMS Categories',
                             'cms_pages' => 'CMS Pages',
@@ -92,7 +91,6 @@ class UserResource extends Resource
                             'sales_forecast' => 'Sales Forecast',
                             'sales_orders' => 'Sales Order By Payment',
                             'shipping_methods' => 'Shipping Methods',
-                            'states' => 'States Management',
                             'sales_top_selling' => 'Top Selling Products',
                         ])
                         ->columns(2)
