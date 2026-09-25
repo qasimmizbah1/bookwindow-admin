@@ -232,7 +232,7 @@ class ProductResource extends Resource
                                 Forms\Components\Toggle::make('is_visible')
                                     ->label('Status')
                                     ->default(false)
-                                    ->visible(auth()->user()->isAdmin())
+                                    ->visible(auth()->user()->isAdmin() ||  auth()->user()->hasPermission('products') )
                                     ->helperText(function ($record) {
                                         if ($record && is_null($record->vendor_id)) {
                                             return 'Admin product - Toggle to enable/disable';
