@@ -248,7 +248,7 @@ class ProductResource extends Resource
                                             return 'Vendor product - Enable to make it live on website';
                                         }
 
-                                        return 'Product will be saved as disabled by default';
+                                        //return 'Product will be saved as disabled by default';
                                     })
                                     ->onColor('success')
                                     ->offColor('danger')
