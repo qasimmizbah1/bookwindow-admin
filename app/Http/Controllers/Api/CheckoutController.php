@@ -119,18 +119,7 @@ class CheckoutController extends Controller
             
          // Process shipping
         $shippingMethod = ShippingMethod::where('code', $request->shipping_method)->firstOrFail();
-
-        $shippingAmount = $shippingMethod->price;
-
-        if($shippingAmount>0)
-        {
-
-            $baseCost = 49;
-            
-            $totalItems = $cart->items() ->selectRaw('SUM(quantity) as total_items')->value('total_items');
-            $shippingAmount = $shippingAmount * $totalItems;
-
-        }
+        $shippingAmount = (float) $shippingMethod->price;
         $discountAmount = $request->discount_amount ?? 0;
         $totalAmount = $subtotal + $shippingAmount - $discountAmount;
         $user = $this->getOrCreateUser($request, $dbPhone);
