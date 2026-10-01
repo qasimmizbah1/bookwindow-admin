@@ -91,6 +91,35 @@ class CheckoutController extends Controller
             return response()->json(['message' => 'Your cart is empty'], 400);
         }
 
+        // Validate stock for each item in cart
+        foreach ($cartItems as $item) {
+            $product = $item->product;
+            if (!$product || !$product->is_visible) {
+                return response()->json([
+                    'message' => "The product '{$item->product_name}' is currently unavailable. Please remove it from your cart to proceed.",
+                    'error' => 'Product unavailable',
+                    'out_of_stock_product_id' => $item->product_id
+                ], 422);
+            }
+
+            $availableStock = (int) ($product->quantity ?? 0);
+            if ($availableStock <= 0) {
+                return response()->json([
+                    'message' => "Sorry, '{$product->name}' is currently out of stock. Please remove it from your cart to proceed.",
+                    'error' => 'Product out of stock',
+                    'out_of_stock_product_id' => $item->product_id
+                ], 422);
+            }
+
+            if ($item->quantity > $availableStock) {
+                return response()->json([
+                    'message' => "Sorry, only {$availableStock} unit(s) available for '{$product->name}'. Please update your cart quantity to proceed.",
+                    'error' => 'Insufficient stock',
+                    'out_of_stock_product_id' => $item->product_id
+                ], 422);
+            }
+        }
+
         // Calculate subtotal
         $subtotal = $cartItems->sum(function ($item) {
             return $item->price * $item->quantity;

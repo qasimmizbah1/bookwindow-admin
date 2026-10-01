@@ -37,6 +37,14 @@ class CartController extends Controller
 
              $product = Product::visibleToCustomers()->findOrFail($request->product_id);
 
+             $availableStock = (int) ($product->quantity ?? 0);
+             if ($availableStock <= 0) {
+                 return response()->json([
+                     'success' => false,
+                     'message' => "Sorry, '{$product->name}' is currently out of stock."
+                 ], 422);
+             }
+
              // Check if user is logged in via customer guard, api guard, default web guard, or request user_id
              $customerId = auth('customer')->id() 
                  ?? (auth('api')->id() 
@@ -119,21 +127,27 @@ class CartController extends Controller
 
             protected function updateOrCreateCartItem($cart, $product, $quantity)
             {
-            $cartItem = $cart->items()->where('product_id', $product->id)->first();
+                $cartItem = $cart->items()->where('product_id', $product->id)->first();
+                $availableStock = (int) ($product->quantity ?? 0);
 
-            if ($cartItem) {
-                $cartItem->update([
-                    'quantity' => $cartItem->quantity + $quantity
-                ]);
-            } else {
-                $cart->items()->create([
-                    'product_id' => $product->id,
-                    'quantity' => $quantity,
-                    'price' => $product->price,
-                    'image' => $product->image,
-                    'product_weight' => $product->weight
-                ]);
-            }
+                if ($cartItem) {
+                    $newQty = $cartItem->quantity + $quantity;
+                    if ($availableStock > 0 && $newQty > $availableStock) {
+                        $newQty = $availableStock;
+                    }
+                    $cartItem->update([
+                        'quantity' => $newQty
+                    ]);
+                } else {
+                    $qtyToAdd = ($availableStock > 0 && $quantity > $availableStock) ? $availableStock : $quantity;
+                    $cart->items()->create([
+                        'product_id' => $product->id,
+                        'quantity' => $qtyToAdd,
+                        'price' => $product->price,
+                        'image' => $product->image,
+                        'product_weight' => $product->weight
+                    ]);
+                }
             }
 
 // Helper method to update session cart
@@ -195,6 +209,8 @@ protected function getCartData()
             'products.slug as product_slug',
             'products.price as product_price',
             'products.mrp as product_mrp',
+            'products.quantity as stock_quantity',
+            'products.is_visible as is_visible',
             'cart_items.quantity',
             'cart_items.image',
             'cart_items.product_weight',
@@ -287,7 +303,22 @@ return response()->json(['success' => false, 'message' => 'Cart not found']);
                     
                     // Ensure quantity doesn't go below 1
                     if ($newQuantity < 1) {
-                       $deleted = $cart->items()->where('product_id', $productId)->delete();
+                       $cart->items()->where('product_id', $productId)->delete();
+                       return response()->json([
+                           'success' => true,
+                           'message' => 'Item removed from cart',
+                           'new_quantity' => 0
+                       ]);
+                    }
+
+                    // Check available stock
+                    $product = Product::find($productId);
+                    $availableStock = (int) ($product->quantity ?? 0);
+                    if ($product && $quantityChange > 0 && $newQuantity > $availableStock) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Only {$availableStock} unit(s) available in stock"
+                        ], 422);
                     }
                     
                     // Update the quantity

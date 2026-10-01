@@ -72,6 +72,7 @@ public function productsBySlug($slug)
                 'description',
                 'mrp',
                 'price',
+                'quantity',
                 'category_id'
             )
             ->get();
