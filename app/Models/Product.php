@@ -25,6 +25,7 @@ class Product extends Model
         'meta_tag_description',
         'meta_tag_keywords',
         'image',
+        'image_alt',
         'gallery',
         'model',
         'author',

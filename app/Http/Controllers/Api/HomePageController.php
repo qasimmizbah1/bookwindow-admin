@@ -54,7 +54,7 @@ class HomePageController extends Controller
                 ->whereIn('id', $bestSellerIds)
                 ->select([
                     'id', 'name', 'slug', 'sku', 'model', 'author',
-                    'image', 'gallery', 'description', 'mrp', 'price',
+                    'image', 'image_alt', 'gallery', 'description', 'mrp', 'price',
                     'book_language', 'quantity', 'production_id'
                 ])
                 ->with(['production:id,name,slug'])

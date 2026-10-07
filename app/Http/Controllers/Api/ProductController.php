@@ -85,6 +85,7 @@ class ProductController extends Controller
                     'sku',
                     'model',
                     'image',
+                    'image_alt',
                     'description',
                     'mrp',
                     'price',

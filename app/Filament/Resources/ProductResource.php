@@ -211,6 +211,11 @@ class ProductResource extends Resource
                                     ->image()
                                     ->imageEditor()
                                     ->directory('products'),
+                                Forms\Components\TextInput::make('image_alt')
+                                    ->label('Image ALT Text')
+                                    ->placeholder('e.g. Sikhwal General English Book Cover')
+                                    ->maxLength(255)
+                                    ->helperText('SEO & Accessibility ALT tag for the product image. If left empty, the book title will be used.'),
                                 Forms\Components\FileUpload::make('gallery')
                                     ->label('Product Gallery')
                                     ->multiple()
@@ -345,6 +350,13 @@ class ProductResource extends Resource
                 Tables\Columns\ImageColumn::make('image')
                     ->circular()
                     ->size(50),
+
+                Tables\Columns\TextColumn::make('image_alt')
+                    ->label('Image ALT')
+                    ->searchable()
+                    ->limit(25)
+                    ->placeholder('—')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('vendor_display')
                     ->label('Vendor')
