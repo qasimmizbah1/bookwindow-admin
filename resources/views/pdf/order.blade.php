@@ -217,9 +217,12 @@ table {
 
 @php
     $displayItems = isset($items) ? $items : $order->items;
-    $itemsTotal = $displayItems->sum(function($item) {
+    $rawItemsTotal = $displayItems->sum(function($item) {
         return ($item->quantity ?? 1) * ($item->price ?? 0);
     });
+    $isLegacyDiscounted = (($order->discount_amount ?? 0) > 0 && $rawItemsTotal > 0 && abs(($rawItemsTotal + (float)$order->discount_amount) - (float)($order->subtotal ?? 0)) < 0.05);
+    $subtotalRatio = ($isLegacyDiscounted && $rawItemsTotal > 0) ? ((float)$order->subtotal / $rawItemsTotal) : 1.0;
+    $itemsTotal = ($order->subtotal && (float)$order->subtotal > 0) ? (float)$order->subtotal : $rawItemsTotal;
 @endphp
 
 <table class="items-table">
@@ -235,13 +238,16 @@ table {
     </thead>
     <tbody>
         @foreach($displayItems as $index => $item)
+        @php
+            $itemUnitPrice = $isLegacyDiscounted ? round(($item->price ?? 0) * $subtotalRatio, 2) : ($item->price ?? 0);
+        @endphp
         <tr>
             <td align="center">{{ $loop->iteration }}</td>
             <td class="product-col">{{ $item->product?->name }}</td>
             <td align="center">{{ $item->product?->model ?? '-' }}</td>
             <td align="center" class="bold">{{ $item->quantity }}</td>
-            <td align="center">₹{{ number_format($item->price, 2) }}</td>
-            <td align="center" class="bold">₹{{ number_format($item->quantity * $item->price, 2) }}</td>
+            <td align="center">₹{{ number_format($itemUnitPrice, 2) }}</td>
+            <td align="center" class="bold">₹{{ number_format($item->quantity * $itemUnitPrice, 2) }}</td>
         </tr>
         @endforeach
     </tbody>

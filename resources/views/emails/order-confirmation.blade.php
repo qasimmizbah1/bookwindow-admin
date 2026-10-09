@@ -193,8 +193,16 @@
                 </thead>
                 <tbody>
                     @if(isset($orderItems) && count($orderItems) > 0)
+                        @php
+                            $rawItemsTotal = $orderItems->sum(function($item) {
+                                return ($item->quantity ?? 1) * ($item->price ?? 0);
+                            });
+                            $isLegacyDiscounted = (($order->discount_amount ?? 0) > 0 && $rawItemsTotal > 0 && abs(($rawItemsTotal + (float)$order->discount_amount) - (float)($order->subtotal ?? 0)) < 0.05);
+                            $subtotalRatio = ($isLegacyDiscounted && $rawItemsTotal > 0) ? ((float)$order->subtotal / $rawItemsTotal) : 1.0;
+                        @endphp
                         @foreach($orderItems as $item)
                             @php
+                                $unitPrice = $isLegacyDiscounted ? round(($item->price ?? 0) * $subtotalRatio, 2) : ($item->price ?? 0);
                                 $rawImage = !empty($item->product_image) ? $item->product_image : ($item->product?->image ?? null);
                                 $imgSrc = null;
 
@@ -219,10 +227,10 @@
                                 </td>
                                 <td style="padding: 12px; vertical-align: middle;">
                                     <div class="product-name" style="font-weight: bold; color: #1e293b; font-size: 13px; line-height: 1.4; margin-bottom: 4px;">{{ $item->product_name ?? ($item->product?->name ?? 'Book / Product') }}</div>
-                                    <div class="product-qty" style="color: #64748b; font-size: 12px;">Qty: {{ $item->quantity }} &times; ₹{{ number_format($item->price, 2) }}</div>
+                                    <div class="product-qty" style="color: #64748b; font-size: 12px;">Qty: {{ $item->quantity }} &times; ₹{{ number_format($unitPrice, 2) }}</div>
                                 </td>
                                 <td align="right" style="padding: 12px; vertical-align: middle; font-weight: bold; color: #1e293b; font-size: 13px;">
-                                    ₹{{ number_format($item->price * $item->quantity, 2) }}
+                                    ₹{{ number_format($unitPrice * $item->quantity, 2) }}
                                 </td>
                             </tr>
                         @endforeach

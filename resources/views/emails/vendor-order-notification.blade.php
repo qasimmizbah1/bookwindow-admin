@@ -194,10 +194,18 @@
                 </tr>
             </thead>
             <tbody>
+                @php
+                    $rawItemsTotal = $vendorItems->sum(function($item) {
+                        return ($item->quantity ?? 1) * ($item->price ?? 0);
+                    });
+                    $isLegacyDiscounted = (($order->discount_amount ?? 0) > 0 && $rawItemsTotal > 0 && abs(($rawItemsTotal + (float)$order->discount_amount) - (float)($order->subtotal ?? 0)) < 0.05);
+                    $subtotalRatio = ($isLegacyDiscounted && $rawItemsTotal > 0) ? ((float)$order->subtotal / $rawItemsTotal) : 1.0;
+                @endphp
                 @foreach($vendorItems as $index => $item)
                 @php
                     $productName = $item->product ? $item->product->name : ($item->product_name ?? 'Product #' . $item->product_id);
-                    $subtotal = ($item->quantity ?? 1) * ($item->price ?? 0);
+                    $unitPrice = $isLegacyDiscounted ? round(($item->price ?? 0) * $subtotalRatio, 2) : ($item->price ?? 0);
+                    $subtotal = ($item->quantity ?? 1) * $unitPrice;
                     $rawImage = !empty($item->product_image) ? $item->product_image : ($item->product?->image ?? null);
                     $imgSrc = null;
 
@@ -222,7 +230,7 @@
                     </td>
                     <td style="vertical-align: middle;"><strong>{{ $productName }}</strong></td>
                     <td style="text-align: center; vertical-align: middle;">{{ $item->quantity ?? 1 }}</td>
-                    <td style="text-align: right; vertical-align: middle;">₹{{ number_format($item->price ?? 0, 2) }}</td>
+                    <td style="text-align: right; vertical-align: middle;">₹{{ number_format($unitPrice, 2) }}</td>
                     <td style="text-align: right; font-weight: 600; vertical-align: middle;">₹{{ number_format($subtotal, 2) }}</td>
                 </tr>
                 @endforeach

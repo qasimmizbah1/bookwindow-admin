@@ -398,16 +398,25 @@ class OrderResource extends Resource
                                                         </thead>
                                                         <tbody class="divide-y divide-gray-200">';
                                                 
+                                                $rawItemsTotal = $items->sum(function ($item) {
+                                                    return ($item->quantity ?? 1) * ($item->price ?? 0);
+                                                });
+
+                                                // Handle legacy orders where coupon discount was mistakenly deducted from line item prices
+                                                $isLegacyDiscounted = ($record && (float)($record->discount_amount ?? 0) > 0 && $rawItemsTotal > 0 && abs(($rawItemsTotal + (float)$record->discount_amount) - (float)($record->subtotal ?? 0)) < 0.05);
+                                                $subtotalRatio = ($isLegacyDiscounted && $rawItemsTotal > 0) ? ((float)$record->subtotal / $rawItemsTotal) : 1.0;
+
                                                 $counter = 1;
                                                 foreach ($items as $item) {
                                                     $productName = $item->product ? $item->product->name : ($item->product_name ?? 'Product #' . $item->product_id);
-                                                    $subtotal = ($item->quantity ?? 1) * ($item->price ?? 0);
+                                                    $unitPrice = $isLegacyDiscounted ? round(($item->price ?? 0) * $subtotalRatio, 2) : ($item->price ?? 0);
+                                                    $subtotal = ($item->quantity ?? 1) * $unitPrice;
                                                     $html .= '<tr class="transition-colors duration-150">
                                                         <td class="px-4 py-3 text-sm text-gray-500">' . $counter . '</td>
                                                         <td class="px-4 py-3 text-sm font-medium text-gray-700">' . e($productName) . '</td>
                                                         <td class="px-4 py-3 text-sm font-medium text-gray-700">' . e($item->product->model ?? '') . '</td>
                                                         <td class="px-4 py-3 text-sm text-center text-gray-700">' . ($item->quantity ?? 1) . '</td>
-                                                        <td class="px-4 py-3 text-sm text-right text-gray-700">' . format_currency($item->price ?? 0, 2) . '</td>
+                                                        <td class="px-4 py-3 text-sm text-right text-gray-700">' . format_currency($unitPrice, 2) . '</td>
                                                         <td class="px-4 py-3 text-sm text-right font-semibold text-gray-700">' . format_currency($subtotal, 2) . '</td>
                                                     </tr>';
                                                     $counter++;
@@ -416,9 +425,10 @@ class OrderResource extends Resource
                                                 $html .= '</tbody></table></div>';
                                                 
                                                 $totalItems = $items->sum('quantity');
-                                                $totalAmount = $items->sum(function ($item) {
-                                                    return ($item->quantity ?? 1) * ($item->price ?? 0);
-                                                });
+                                                $displaySubtotal = ($record && $record->subtotal && (float)$record->subtotal > 0)
+                                                    ? (float)$record->subtotal
+                                                    : $rawItemsTotal;
+                                                $totalAmount = $displaySubtotal;
                                                 
                                                 if ($isVendor) {
                                                     $commissionRate = $vendor->commission_rate;
@@ -465,7 +475,7 @@ class OrderResource extends Resource
                                                             </div>
                                                             <div class="flex justify-between py-2 border-b border-gray-200">
                                                                 <span class="text-sm font-medium text-gray-600">Items Subtotal:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($totalAmount, 2) . '</span>
+                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($displaySubtotal, 2) . '</span>
                                                             </div>
                                                             <div class="flex justify-between py-2 border-b border-gray-200">
                                                                 <span class="text-sm font-medium text-gray-600">Shipping:</span>

@@ -203,28 +203,24 @@ class CheckoutController extends Controller
         'order_number' => 'OR-' . $order->id,
         ]);
        
-        // Create order items
+        // Create order items (saving actual product price; coupon discount is tracked at order level)
         foreach ($cartItems as $item) {
+            $product_price = (float)$item->price;
 
-        $product_price = $item->price;
-
-        $product_price = $this->calculateProductPriceWithCoupon($item, $request->coupon_code, $subtotal);
-                
             DB::table('order_items')->insert([
-            'order_id' => $order->id,
-            'product_id' => $item->product_id,
-            'product_name' => $item->product->name,
-            'product_image' => $item->product->image,
-            'price' => $product_price,
-            'quantity' => $item->quantity,
-            'product_weight' => $item->product->weight,
-            'total' => $product_price * $item->quantity,
-            'payment_method'=> $request->payment_method,
-            'vendor_id' =>$item->product->vendor_id,
-            'created_at' => now(),  // recommended to add timestamps if your table has them
-            'updated_at' => now(),
+                'order_id' => $order->id,
+                'product_id' => $item->product_id,
+                'product_name' => $item->product->name,
+                'product_image' => $item->product->image,
+                'price' => $product_price,
+                'quantity' => $item->quantity,
+                'product_weight' => $item->product->weight,
+                'total' => $product_price * $item->quantity,
+                'payment_method'=> $request->payment_method,
+                'vendor_id' =>$item->product->vendor_id,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
-
         }
 
         
@@ -295,10 +291,10 @@ class CheckoutController extends Controller
             ]);
        
             
+            // Create order items (saving actual product price; coupon discount is tracked at order level)
             foreach ($cartItems as $item) {
+                $product_price = (float)$item->price;
 
-                $product_price = $this->calculateProductPriceWithCoupon($item, $request->coupon_code, $subtotal);
-                
                 DB::table('order_items')->insert([
                     'order_id' => $order->id,
                     'product_id' => $item->product_id,
