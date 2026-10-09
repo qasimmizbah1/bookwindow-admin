@@ -102,7 +102,7 @@ class ShippingCalculationService
                 $codAllowed = false;
                 $codRejectionReason = 'Cash on Delivery is currently disabled by store administration.';
                 $codExplanation = 'COD Disabled';
-            } elseif ($cartSubtotal > (float) ($setting->max_cod_order_amount ?? 5000.00)) {
+            } elseif (!empty($setting->max_cod_order_amount) && (float) $setting->max_cod_order_amount > 0 && $cartSubtotal > (float) $setting->max_cod_order_amount) {
                 $codAllowed = false;
                 $maxLimit = (float) $setting->max_cod_order_amount;
                 $codRejectionReason = "COD is not permitted on orders exceeding ₹" . number_format($maxLimit, 2);

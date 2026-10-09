@@ -33,12 +33,14 @@ class ShippingSettingController extends Controller
                 ->all();
         }
 
+        $setting = ShippingSetting::find(1) ?? ShippingSetting::firstOrCreate(['id' => 1]);
+
         return response()->json([
             'success' => true,
             'data' => [
                 'cod' => [
                     'is_enabled' => (bool) $setting->is_cod_enabled,
-                    'max_order_amount' => (float) ($setting->max_cod_order_amount ?? 5000.00),
+                    'max_order_amount' => !empty($setting->max_cod_order_amount) ? (float) $setting->max_cod_order_amount : 0.00,
                     'default_charge' => (float) ($setting->default_cod_charge ?? 49.00),
                     'slabs' => $codSlabs,
                 ],
@@ -51,6 +53,10 @@ class ShippingSettingController extends Controller
                     'weight_slabs' => $setting->weight_slabs ?? [],
                 ],
             ],
+        ])->withHeaders([
+            'Cache-Control' => 'no-cache, no-store, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
         ]);
     }
 
