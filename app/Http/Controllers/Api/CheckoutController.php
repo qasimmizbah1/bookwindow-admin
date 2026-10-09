@@ -22,6 +22,7 @@ use App\Mail\AdminOrderNotification;
 use App\Mail\VendorOrderNotification;
 use App\Models\Vendor;
 use App\Services\RazorpayService;
+use App\Services\ShippingCalculationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -255,12 +256,36 @@ class CheckoutController extends Controller
                     'message' => 'Payment Gateway Error: ' . $e->getMessage() . '. Please verify Razorpay credentials or try Cash on Delivery.'
                 ], 500);
             }
-        } else 
-            {
-            $totalAmount = $totalAmount + $request->delivery_amount; 
+        } else {
+            $isCod = in_array(strtolower(trim((string)$request->payment_method)), ['cod', 'cash_on_delivery']);
+            $codAmount = 0.00;
+
+            if ($isCod) {
+                // Calculate total weight of cart
+                $totalWeight = $cartItems->sum(function ($item) {
+                    $w = (float) ($item->product_weight ?? ($item->product->weight ?? 0.5));
+                    return $w * (int)$item->quantity;
+                });
+
+                /** @var ShippingCalculationService $shippingCalcService */
+                $shippingCalcService = app(ShippingCalculationService::class);
+                $codResult = $shippingCalcService->calculate($subtotal, $totalWeight, 'cod');
+
+                if (!$codResult['is_cod_allowed']) {
+                    return response()->json([
+                        'message' => $codResult['cod_rejection_reason'] ?: 'Cash on Delivery is currently unavailable for this order.',
+                        'error' => $codResult['cod_rejection_reason'] ?: 'COD not available',
+                    ], 422);
+                }
+
+                $codAmount = (float) $codResult['cod_amount'];
+            } else {
+                $codAmount = (float) ($request->delivery_amount ?? 0);
+            }
+
+            $totalAmount = $totalAmount + $codAmount; 
 
             $order = Order::create([
-                
                 'session_id' => $request->session_id,
                 'email' => $request->email,
                 'user_id' => $user ? $user->id : null,
@@ -283,7 +308,7 @@ class CheckoutController extends Controller
                 'district' => $request->district,
                 'state' => $request->state,
                 'country' => 'India',
-                'delivery_amount'=>$request->delivery_amount,
+                'delivery_amount' => $codAmount,
             ]);
 
             $order->update([

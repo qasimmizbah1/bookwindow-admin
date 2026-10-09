@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\SitemapController;
 use App\Http\Controllers\Api\VendorRegistrationController;
 use App\Http\Controllers\Api\GlobalSettingController;
+use App\Http\Controllers\Api\ShippingSettingController;
 
 //Basic API
 
@@ -133,6 +134,8 @@ Route::get('news/{slug}', [NewsController::class, 'newsBySlug']);
 Route::get('/home-page', [HomePageController::class, 'index']);
 Route::get('/contact-page', [ContactPageController::class, 'index']);
 Route::get('/global-settings', [GlobalSettingController::class, 'index']);
+Route::get('/shipping-settings', [ShippingSettingController::class, 'index']);
+Route::post('/shipping-settings/calculate', [ShippingSettingController::class, 'calculate']);
 
 //Conatct Form
 Route::post('/contact-form', [ContactFormController::class, 'send']);
