@@ -66,6 +66,7 @@ Route::post('/sync-customer', [CartController::class, 'syncCustomer']);
 Route::post('/recover', [CartController::class, 'recover']);
 Route::post('/coupon/{coupon_code}', [CheckoutController::class, 'showCouponCode']);
 Route::get('/coupons', [CheckoutController::class, 'getAvailableCoupons']);
+Route::get('/recommendations', [CartController::class, 'recommendations']);
 
 });
 

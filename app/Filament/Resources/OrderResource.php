@@ -89,6 +89,14 @@ class OrderResource extends Resource
             }
         }
 
+        // Filter orders based on the header dropdown selection aligned with Import Orders
+        $orderStatus = request()->query('order_status');
+        if ($orderStatus === 'confirmed') {
+            $query->whereIn('status', ['processing', 'order_shipped', 'completed']);
+        } elseif ($orderStatus === 'rejected') {
+            $query->whereIn('status', ['declined', 'cancelled', 'payment_cancelled']);
+        }
+
         return $query;
     }
 
@@ -715,6 +723,41 @@ class OrderResource extends Resource
             ])
             ->defaultSort('id', 'desc')
             ->headerActions([
+                // Quick Status Dropdown aligned with Import Orders
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('filterAllOrders')
+                        ->label('All Orders')
+                        ->icon('heroicon-o-bars-3')
+                        ->color('gray')
+                        ->url(fn () => route('filament.admin.resources.orders.index')),
+
+                    Tables\Actions\Action::make('filterConfirmedOrders')
+                        ->label('Order Confirmed')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->url(fn () => route('filament.admin.resources.orders.index', ['order_status' => 'confirmed'])),
+
+                    Tables\Actions\Action::make('filterRejectedOrders')
+                        ->label('Rejected')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->url(fn () => route('filament.admin.resources.orders.index', ['order_status' => 'rejected'])),
+                ])
+                ->label(function () {
+                    $status = request()->query('order_status');
+                    if ($status === 'confirmed') return 'Order Confirmed';
+                    if ($status === 'rejected') return 'Rejected';
+                    return 'Order Status';
+                })
+                ->icon('heroicon-m-chevron-down')
+                ->color(function () {
+                    $status = request()->query('order_status');
+                    if ($status === 'confirmed') return 'success';
+                    if ($status === 'rejected') return 'danger';
+                    return 'gray';
+                })
+                ->button(),
+
                 // Only import action for admin
                 Action::make('import')
                     ->label('Import Orders')

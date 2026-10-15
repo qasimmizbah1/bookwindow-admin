@@ -54,4 +54,12 @@ class Setting extends Model
         $val = static::get('vendor_commission_gst_percentage', '18.00');
         return is_numeric($val) ? (float) $val : 18.00;
     }
+
+    /**
+     * Get Checkout Upsell & Recommendations configuration
+     */
+    public static function getUpsellSettings(): array
+    {
+        return UpsellSetting::current()->toConfigArray();
+    }
 }

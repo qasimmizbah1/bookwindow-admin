@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Customer;
+use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
@@ -472,6 +473,106 @@ return response()->json(['success' => false, 'message' => 'Cart not found']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Get recommended / frequently bought together products for checkout upsell
+     */
+    public function recommendations(Request $request)
+    {
+        $settings = Setting::getUpsellSettings();
+
+        // If master switch is disabled, return early with empty recommendations
+        if (!$settings['enabled']) {
+            return response()->json([
+                'status' => true,
+                'settings' => $settings,
+                'data' => [],
+                'categories' => []
+            ]);
+        }
+
+        $sessionId = $request->query('session_id') ?? $request->input('session_id');
+        $excludeIds = [];
+        $categoryIds = [];
+
+        // 1. If session_id provided, get existing cart items to exclude & extract their categories
+        if ($sessionId) {
+            $cart = Cart::where('session_id', $sessionId)->first();
+            if ($cart) {
+                $cartItems = $cart->items()->with('product')->get();
+                foreach ($cartItems as $cItem) {
+                    $excludeIds[] = $cItem->product_id;
+                    if ($cItem->product && !empty($cItem->product->category_id)) {
+                        $cats = is_array($cItem->product->category_id)
+                            ? $cItem->product->category_id
+                            : json_decode($cItem->product->category_id, true);
+                        if (is_array($cats)) {
+                            $categoryIds = array_merge($categoryIds, $cats);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Allow passing explicit exclude_ids or category_ids from client
+        if ($request->has('exclude_ids')) {
+            $rawExclude = is_array($request->input('exclude_ids'))
+                ? $request->input('exclude_ids')
+                : explode(',', $request->input('exclude_ids'));
+            $excludeIds = array_unique(array_merge($excludeIds, array_map('intval', $rawExclude)));
+        }
+
+        if ($request->has('category_ids')) {
+            $rawCats = is_array($request->input('category_ids'))
+                ? $request->input('category_ids')
+                : explode(',', $request->input('category_ids'));
+            $categoryIds = array_unique(array_merge($categoryIds, $rawCats));
+        }
+
+        $categoryIds = array_values(array_unique(array_filter($categoryIds)));
+
+        // Select single category (from the cart item)
+        $singleCategoryId = !empty($categoryIds) ? end($categoryIds) : null;
+
+        $maxProducts = max(3, min(20, (int) ($settings['max_products'] ?? 8)));
+
+        // 2. Query related products matching this single category
+        $query = Product::visibleToCustomers()
+            ->whereNotIn('id', $excludeIds)
+            ->where('quantity', '>', 0);
+
+        if ($singleCategoryId) {
+            $query->whereJsonContains('category_id', (string) $singleCategoryId);
+        }
+
+        $recommendations = $query->inRandomOrder()->limit($maxProducts)->get([
+            'id', 'name', 'slug', 'image', 'price', 'mrp', 'author', 'quantity', 'category_id'
+        ]);
+
+        // 3. Fallback: If less items found in this single category, fetch popular/bestselling visible books
+        if ($recommendations->count() < $maxProducts) {
+            $needed = $maxProducts - $recommendations->count();
+            $existingFoundIds = array_merge($excludeIds, $recommendations->pluck('id')->toArray());
+
+            $fallback = Product::visibleToCustomers()
+                ->whereNotIn('id', $existingFoundIds)
+                ->where('quantity', '>', 0)
+                ->inRandomOrder()
+                ->limit($needed)
+                ->get([
+                    'id', 'name', 'slug', 'image', 'price', 'mrp', 'author', 'quantity', 'category_id'
+                ]);
+
+            $recommendations = $recommendations->merge($fallback);
+        }
+
+        return response()->json([
+            'status' => true,
+            'settings' => $settings,
+            'category_id' => $singleCategoryId,
+            'data' => $recommendations,
+        ]);
     }
 }
 

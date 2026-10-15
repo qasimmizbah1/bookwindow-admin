@@ -165,66 +165,84 @@ class CheckoutController extends Controller
         $totalAmount = $subtotal + $shippingAmount - $discountAmount;
         $user = $this->getOrCreateUser($request, $dbPhone);
 
-        $order = Order::with('items')
-        ->latest()
-        ->firstOrFail();
+        // Check if there is an existing incomplete/unpaid order for this session or user within last 2 hours
+        $existingOrder = Order::where(function ($q) use ($user, $sessionId, $cleanPhone) {
+                if ($user) {
+                    $q->where('user_id', $user->id);
+                } elseif ($sessionId) {
+                    $q->where('session_id', $sessionId);
+                } elseif ($cleanPhone) {
+                    $q->where('customer_phone', $cleanPhone)
+                      ->orWhere('customer_phone', '+91' . $cleanPhone);
+                }
+            })
+            ->whereIn('payment_status', ['payment_pending', 'created', 'payment_cancelled'])
+            ->whereIn('status', ['payment_pending', 'created', 'payment_cancelled'])
+            ->where('created_at', '>=', now()->subHours(2))
+            ->latest()
+            ->first();
 
-
-
-        
-         //Check payemnt method
+        //Check payment method
         if ($request->payment_method === 'razorpay') {
-        
-        $order = Order::create([
-            'session_id' => $request->session_id,
-            'email' => $request->email,
-            'user_id' => $user ? $user->id : null,
-            'subtotal' => $subtotal,
-            'shipping_amount' => $shippingAmount,
-            'discount_amount' => $discountAmount,
-            'total_amount' => $totalAmount,
-            'payment_method' => $request->payment_method,
-            'payment_status' => 'payment_pending',
-            'address_2' => $request->address2,
-            'shipping_method' => $shippingMethod->name,
-            'address' => $request->address,
-            'coupon_code' => $request->coupon_code,
-            'status' => 'payment_pending',
-            'customer_phone'=> $dbPhone,
-            'first_name'=> $request->first_name,
-            'last_name'=> $request->last_name,
-            'zip_code' => $request->zip_code,
-            'city' => $request->city,
-            'district' => $request->district,
-            'state' => $request->state,
-            'country' => 'India',
-        ]);
+            $orderData = [
+                'session_id' => $request->session_id,
+                'email' => $request->email,
+                'user_id' => $user ? $user->id : null,
+                'subtotal' => $subtotal,
+                'shipping_amount' => $shippingAmount,
+                'discount_amount' => $discountAmount,
+                'total_amount' => $totalAmount,
+                'payment_method' => $request->payment_method,
+                'payment_status' => 'payment_pending',
+                'address_2' => $request->address2,
+                'shipping_method' => $shippingMethod->name,
+                'address' => $request->address,
+                'coupon_code' => $request->coupon_code,
+                'status' => 'payment_pending',
+                'customer_phone' => $dbPhone,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'zip_code' => $request->zip_code,
+                'city' => $request->city,
+                'district' => $request->district,
+                'state' => $request->state,
+                'country' => 'India',
+                'delivery_amount' => 0,
+                'cancelled_by' => null,
+                'cancellation_reason' => null,
+            ];
 
-        $order->update([
-        'order_number' => 'OR-' . $order->id,
-        ]);
+            if ($existingOrder) {
+                $order = $existingOrder;
+                $order->update($orderData);
+                DB::table('order_items')->where('order_id', $order->id)->delete();
+            } else {
+                $order = Order::create($orderData);
+                $order->update([
+                    'order_number' => 'OR-' . $order->id,
+                ]);
+            }
        
-        // Create order items (saving actual product price; coupon discount is tracked at order level)
-        foreach ($cartItems as $item) {
-            $product_price = (float)$item->price;
+            // Create order items (saving actual product price; coupon discount is tracked at order level)
+            foreach ($cartItems as $item) {
+                $product_price = (float)$item->price;
 
-            DB::table('order_items')->insert([
-                'order_id' => $order->id,
-                'product_id' => $item->product_id,
-                'product_name' => $item->product->name,
-                'product_image' => $item->product->image,
-                'price' => $product_price,
-                'quantity' => $item->quantity,
-                'product_weight' => $item->product->weight,
-                'total' => $product_price * $item->quantity,
-                'payment_method'=> $request->payment_method,
-                'vendor_id' =>$item->product->vendor_id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+                DB::table('order_items')->insert([
+                    'order_id' => $order->id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product->name,
+                    'product_image' => $item->product->image,
+                    'price' => $product_price,
+                    'quantity' => $item->quantity,
+                    'product_weight' => $item->product->weight,
+                    'total' => $product_price * $item->quantity,
+                    'payment_method' => $request->payment_method,
+                    'vendor_id' => $item->product->vendor_id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
-        
             try {
                 $razorpayService = new RazorpayService();
                 $razorpayOrder = $razorpayService->createOrder($order, $order->order_number);
@@ -285,7 +303,7 @@ class CheckoutController extends Controller
 
             $totalAmount = $totalAmount + $codAmount; 
 
-            $order = Order::create([
+            $orderData = [
                 'session_id' => $request->session_id,
                 'email' => $request->email,
                 'user_id' => $user ? $user->id : null,
@@ -300,22 +318,30 @@ class CheckoutController extends Controller
                 'address' => $request->address,
                 'coupon_code' => $request->coupon_code,
                 'status' => 'pending',
-                'customer_phone'=> $dbPhone,
-                'first_name'=> $request->first_name,
-                'last_name'=> $request->last_name,
+                'customer_phone' => $dbPhone,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
                 'zip_code' => $request->zip_code,
                 'city' => $request->city,
                 'district' => $request->district,
                 'state' => $request->state,
                 'country' => 'India',
                 'delivery_amount' => $codAmount,
-            ]);
+                'cancelled_by' => null,
+                'cancellation_reason' => null,
+            ];
 
-            $order->update([
-            'order_number' => 'OR-' . $order->id,
-            ]);
+            if ($existingOrder) {
+                $order = $existingOrder;
+                $order->update($orderData);
+                DB::table('order_items')->where('order_id', $order->id)->delete();
+            } else {
+                $order = Order::create($orderData);
+                $order->update([
+                    'order_number' => 'OR-' . $order->id,
+                ]);
+            }
        
-            
             // Create order items (saving actual product price; coupon discount is tracked at order level)
             foreach ($cartItems as $item) {
                 $product_price = (float)$item->price;
@@ -340,10 +366,9 @@ class CheckoutController extends Controller
             $this->clearCartAndSendEmails($cart, $order, $request);
 
             return response()->json([
-            'message' => 'Order placed successfully',
-            'order' => $order,
-            'order_number' => $order->order_number,
-       
+                'message' => 'Order placed successfully',
+                'order' => $order,
+                'order_number' => $order->order_number,
             ]);
         }
     }
@@ -533,23 +558,27 @@ class CheckoutController extends Controller
         }
         $userId = $request->user_id ?? (auth('api')->id() ?: (auth()->id() ?: null));
 
+        // Incomplete / abandoned payment attempts should not count as completed orders
+        $uncompletedStatuses = ['payment_cancelled', 'cancelled', 'payment_pending', 'created', 'failed'];
+
         // 5. First Order Only (New Customer Only)
         if (!empty($coupon->is_first_order_only)) {
             $hasPreviousOrders = false;
             if ($userId) {
                 $hasPreviousOrders = Order::where('user_id', $userId)
-                    ->whereNotIn('status', ['payment_cancelled', 'cancelled'])
+                    ->whereNotIn('status', $uncompletedStatuses)
                     ->exists();
             }
             if (!$hasPreviousOrders && $email) {
-                $hasPreviousOrders = Order::where('email', $email)
-                    ->whereNotIn('status', ['payment_cancelled', 'cancelled'])
-                    ->exists();
+                $hasPreviousOrders = Order::where(function ($q) use ($email) {
+                    $q->where('email', $email)
+                      ->orWhereRaw('LOWER(TRIM(email)) = ?', [$email]);
+                })->whereNotIn('status', $uncompletedStatuses)->exists();
             }
             if (!$hasPreviousOrders && $phone) {
                 $hasPreviousOrders = Order::where(function ($q) use ($phone) {
                     $q->where('customer_phone', 'LIKE', "%{$phone}%");
-                })->whereNotIn('status', ['payment_cancelled', 'cancelled'])->exists();
+                })->whereNotIn('status', $uncompletedStatuses)->exists();
             }
 
             if ($hasPreviousOrders) {
@@ -563,7 +592,7 @@ class CheckoutController extends Controller
 
             if ($userId || $email || $phone) {
                 $customerUsageCount = Order::where('coupon_code', $coupon->code)
-                    ->whereNotIn('status', ['payment_cancelled', 'cancelled'])
+                    ->whereNotIn('status', $uncompletedStatuses)
                     ->where(function ($q) use ($userId, $email, $phone) {
                         $hasCondition = false;
                         if ($userId) {
@@ -571,7 +600,8 @@ class CheckoutController extends Controller
                             $hasCondition = true;
                         }
                         if ($email) {
-                            $q->orWhere('email', $email);
+                            $q->orWhere('email', $email)
+                              ->orWhereRaw('LOWER(TRIM(email)) = ?', [$email]);
                             $hasCondition = true;
                         }
                         if ($phone) {
