@@ -114,19 +114,15 @@ Route::post('/updateuser', [AuthController::class, 'updateuser']);
 });
 
 
-//All Page 
-Route::apiResource('blog', CmsPageController::class);
 //Pages By Slug
 Route::get('cms-pages/{slug}', [CmsPageController::class, 'showBySlug']);
 
-
-//All Post 
-Route::apiResource('blog', CmsPostController::class);
-//Post By Slug
+//Blog Posts (Public Read-Only)
+Route::apiResource('blog', CmsPostController::class)->only(['index', 'show']);
 Route::get('blog/{slug}', [CmsPostController::class, 'showBySlug']);
 
-//News
-Route::apiResource('news', NewsController::class);
+//News (Public Read-Only)
+Route::apiResource('news', NewsController::class)->only(['index', 'show']);
 Route::get('news/{slug}', [NewsController::class, 'newsBySlug']);
 
 
