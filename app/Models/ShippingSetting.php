@@ -13,6 +13,7 @@ class ShippingSetting extends Model
         'is_free_shipping_enabled' => 'boolean',
         'is_weight_shipping_enabled' => 'boolean',
         'is_cod_enabled' => 'boolean',
+        'is_vendor_cod_enabled' => 'boolean',
         'min_order_for_free_shipping' => 'decimal:2',
         'default_flat_shipping' => 'decimal:2',
         'packaging_buffer_weight' => 'decimal:3',
@@ -61,6 +62,7 @@ class ShippingSetting extends Model
                 ],
                 'extra_weight_per_kg_rate' => 30.00,
                 'is_cod_enabled' => true,
+                'is_vendor_cod_enabled' => false,
                 'max_cod_order_amount' => 5000.00,
                 'default_cod_charge' => 49.00,
                 'cod_slabs' => [

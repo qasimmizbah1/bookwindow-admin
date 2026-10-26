@@ -177,12 +177,17 @@ class ShippingSettingResource extends Resource
                         Forms\Components\Tabs\Tab::make('COD Handling Charges')
                             ->schema([
                                 Forms\Components\Section::make('Cash On Delivery (COD) Controls')
-                                    ->description('Configure COD availability and tiered handling charges based on Cart Amount.')
+                                    ->description('Configure COD availability, vendor product eligibility, and tiered handling charges based on Cart Amount.')
                                     ->schema([
                                         Forms\Components\Toggle::make('is_cod_enabled')
                                             ->label('Enable Cash On Delivery (COD)')
                                             ->helperText('Turn off to disable Cash on Delivery store-wide.')
                                             ->default(true),
+
+                                        Forms\Components\Toggle::make('is_vendor_cod_enabled')
+                                            ->label('Allow COD on Vendor Products')
+                                            ->helperText('OFF = Disallow COD if cart contains vendor books (Prepaid only).')
+                                            ->default(false),
 
                                         Forms\Components\TextInput::make('max_cod_order_amount')
                                             ->label('Maximum Order Amount for COD (₹)')
@@ -200,7 +205,7 @@ class ShippingSettingResource extends Resource
                                             ->default(49.00)
                                             ->helperText('Charged if cart value does not fall into any specific slab below.'),
                                     ])
-                                    ->columns(3),
+                                    ->columns(2),
 
                                 Forms\Components\Section::make('Tiered COD Charges Slabs ("Code Shipping")')
                                     ->description('Set COD fee based on Cart Subtotal range (e.g. Below ₹500 → ₹29, ₹500-₹799 → ₹49, ₹800+ → ₹79).')

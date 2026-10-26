@@ -356,7 +356,7 @@ class ProductResource extends Resource
                     ->searchable()
                     ->limit(25)
                     ->placeholder('—')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('vendor_display')
                     ->label('Vendor')
@@ -375,14 +375,20 @@ class ProductResource extends Resource
                     ->searchable()
                     ->limit(30),
 
-                
-                // Publication
-                Tables\Columns\TextColumn::make('production.name')
-                    ->label("Publication")
+                // Price
+                Tables\Columns\TextColumn::make('price')
+                    ->money('INR')
+                    ->sortable(),
+
+                // Quantity / Stock
+                Tables\Columns\TextColumn::make('quantity')
+                    ->label('Stock')
                     ->sortable()
-                    ->searchable(),
+                    ->badge()
+                    ->color(fn ($state) => (int)$state <= 0 ? 'danger' : ((int)$state <= 5 ? 'warning' : 'success'))
+                    ->formatStateUsing(fn ($state) => (int)$state <= 0 ? '0 (Out of Stock)' : (string)$state),
                 
-                //  Status
+                // Status
                 Tables\Columns\IconColumn::make('is_visible')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
@@ -391,16 +397,11 @@ class ProductResource extends Resource
                     ->falseColor('danger')
                     ->label('Status'),
                 
-                // Price
-                Tables\Columns\TextColumn::make('price')
-                    ->money()
-                    ->sortable(),
-                
-                // Quantity
-                Tables\Columns\TextColumn::make('quantity')
-                    ->label('Stock')
+                // Publication
+                Tables\Columns\TextColumn::make('production.name')
+                    ->label("Publication")
                     ->sortable()
-                    ->color(fn ($state) => $state <= 5 ? 'danger' : 'success'),
+                    ->searchable(),
             ])
             ->defaultSort('id', 'desc')
             ->headerActions([
@@ -443,6 +444,50 @@ class ProductResource extends Resource
                 Tables\Filters\Filter::make('inactive')
                     ->label('Inactive Products')
                     ->query(fn ($query) => $query->where('is_visible', 0)),
+
+                // Filter: Out of Stock (Quick Checkbox)
+                Tables\Filters\Filter::make('out_of_stock')
+                    ->label('Out of Stock (0 Qty)')
+                    ->query(fn ($query) => $query->where(fn ($q) => $q->whereNull('quantity')->orWhere('quantity', '<=', 0))),
+
+                // Filter: Stock Status (Select)
+                Tables\Filters\SelectFilter::make('stock_status')
+                    ->label('Stock Status')
+                    ->options([
+                        'out_of_stock' => 'Out of Stock (0 Qty)',
+                        'low_stock' => 'Low Stock (1 to 5 Qty)',
+                        'in_stock' => 'In Stock (> 0 Qty)',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (empty($data['value'])) {
+                            return;
+                        }
+                        if ($data['value'] === 'out_of_stock') {
+                            $query->where(fn ($q) => $q->whereNull('quantity')->orWhere('quantity', '<=', 0));
+                        } elseif ($data['value'] === 'low_stock') {
+                            $query->where('quantity', '>', 0)->where('quantity', '<=', 5);
+                        } elseif ($data['value'] === 'in_stock') {
+                            $query->where('quantity', '>', 0);
+                        }
+                    }),
+
+                // Filter: Sort by Stock Quantity (Lowest to Highest / Highest to Lowest)
+                Tables\Filters\SelectFilter::make('sort_stock')
+                    ->label('Sort by Stock Qty')
+                    ->options([
+                        'lowest_first' => 'Lowest to Highest Stock (0 → N)',
+                        'highest_first' => 'Highest to Lowest Stock (N → 0)',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (empty($data['value'])) {
+                            return;
+                        }
+                        if ($data['value'] === 'lowest_first') {
+                            $query->reorder()->orderByRaw('COALESCE(quantity, 0) ASC');
+                        } elseif ($data['value'] === 'highest_first') {
+                            $query->reorder()->orderByRaw('COALESCE(quantity, 0) DESC');
+                        }
+                    }),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([

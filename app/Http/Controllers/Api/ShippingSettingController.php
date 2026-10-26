@@ -40,6 +40,7 @@ class ShippingSettingController extends Controller
             'data' => [
                 'cod' => [
                     'is_enabled' => (bool) $setting->is_cod_enabled,
+                    'is_vendor_cod_enabled' => (bool) ($setting->is_vendor_cod_enabled ?? false),
                     'max_order_amount' => !empty($setting->max_cod_order_amount) ? (float) $setting->max_cod_order_amount : 0.00,
                     'default_charge' => (float) ($setting->default_cod_charge ?? 49.00),
                     'slabs' => $codSlabs,

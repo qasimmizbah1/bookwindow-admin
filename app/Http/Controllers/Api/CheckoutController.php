@@ -285,9 +285,14 @@ class CheckoutController extends Controller
                     return $w * (int)$item->quantity;
                 });
 
+                // Check if cart contains any vendor product
+                $hasVendorItems = $cartItems->contains(function ($item) {
+                    return !empty($item->product?->vendor_id);
+                });
+
                 /** @var ShippingCalculationService $shippingCalcService */
                 $shippingCalcService = app(ShippingCalculationService::class);
-                $codResult = $shippingCalcService->calculate($subtotal, $totalWeight, 'cod');
+                $codResult = $shippingCalcService->calculate($subtotal, $totalWeight, 'cod', null, $hasVendorItems);
 
                 if (!$codResult['is_cod_allowed']) {
                     return response()->json([

@@ -20,7 +20,8 @@ class ShippingCalculationService
         float $cartSubtotal,
         float $totalWeight = 0.5,
         string $paymentMethod = 'prepaid',
-        ?ShippingSetting $setting = null
+        ?ShippingSetting $setting = null,
+        bool $hasVendorItems = false
     ): array {
         $setting = $setting ?? ShippingSetting::current();
 
@@ -102,6 +103,10 @@ class ShippingCalculationService
                 $codAllowed = false;
                 $codRejectionReason = 'Cash on Delivery is currently disabled by store administration.';
                 $codExplanation = 'COD Disabled';
+            } elseif ($hasVendorItems && !$setting->is_vendor_cod_enabled) {
+                $codAllowed = false;
+                $codRejectionReason = 'Cash on Delivery is not available for orders containing vendor books. Please pay online via UPI, Cards, or NetBanking.';
+                $codExplanation = 'COD not allowed on vendor books';
             } elseif (!empty($setting->max_cod_order_amount) && (float) $setting->max_cod_order_amount > 0 && $cartSubtotal > (float) $setting->max_cod_order_amount) {
                 $codAllowed = false;
                 $maxLimit = (float) $setting->max_cod_order_amount;

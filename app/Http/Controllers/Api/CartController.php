@@ -212,6 +212,7 @@ protected function getCartData()
             'products.mrp as product_mrp',
             'products.quantity as stock_quantity',
             'products.is_visible as is_visible',
+            'products.vendor_id as vendor_id',
             'cart_items.quantity',
             'cart_items.image',
             'cart_items.product_weight',
