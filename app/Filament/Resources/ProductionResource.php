@@ -140,7 +140,8 @@ class ProductionResource extends Resource
         ])
         ->defaultSort('id', 'desc')
         ->headerActions([
-            CreateAction::make(),
+            CreateAction::make()
+            ->label('New Publication'),
             Action::make('import')
                 ->label('Import Publication')
                 ->action(function (array $data) {
