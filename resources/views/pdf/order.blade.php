@@ -192,7 +192,8 @@ table {
                     <span class="bold" style="color: #666; font-size: 11px;">(Fulfilled via BookWindow Platform)</span>
                 @else
                     <span class="bold">BOOKWINDOW</span><br>
-                    <span class="bold">Store:</span> Shop No. 9, 2nd floor, Udita tower Radha Ballabh Marg,<br>
+                    <span class="bold">Store:</span> Shop No. 9, 2nd floor, <br>
+                    Udita tower Radha Ballabh Marg,<br>
                     Dada Gurudev Nagar, Sanganer, Jaipur, Rajasthan<br>
                     <span class="bold">Code:</span> 302029<br>
                     <span class="bold">Phone No:</span> +91 9468 888227<br>
