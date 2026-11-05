@@ -190,22 +190,21 @@ class HomePageResource extends Resource
 
                 Forms\Components\Section::make('Banner Section')
                     ->schema([
-
-                        
-                        
                         Forms\Components\FileUpload::make('banner_images')
-                            ->label('Banner Image')
+                            ->label('Banner Image (Desktop)')
                             ->image()
                             ->disk('public')
-                            ->directory('home-page/banner')
-                            ->reorderable(),
-                         
-                        
-                        
-                        
-                        Forms\Components\TextInput::make('banner_button_url')
-                            ->label('Button URL'),
+                            ->directory('home-page/banner'),
 
+                        Forms\Components\FileUpload::make('mbanner_images')
+                            ->label('Banner Image (Mobile)')
+                            ->image()
+                            ->disk('public')
+                            ->directory('home-page/banner'),
+
+                        Forms\Components\TextInput::make('banner_button_url')
+                            ->label('Button URL')
+                            ->columnSpanFull(),
                     ]) ->columns(2),
                 
                     //SEO

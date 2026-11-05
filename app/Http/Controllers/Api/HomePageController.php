@@ -114,6 +114,7 @@ class HomePageController extends Controller
             'banner' => [
                 'banner_button_url' => $homePage->banner_button_url,
                 'images' => $homePage->banner_images,
+                'mobile_images' => $homePage->mbanner_images ?: $homePage->banner_images,
             ],
             'category_section' => [
                 'cat_sec_title' => $homePage->cat_sec_title,

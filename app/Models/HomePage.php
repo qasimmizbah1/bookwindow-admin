@@ -26,6 +26,7 @@ class HomePage extends Model
         'banner_button_title',
         'banner_button_url',
         'banner_images' => 'array',
+        'mbanner_images' => 'array',
         'category_sections' => 'array',
         'cat_tabs'=>'array',
         'testimonial_sections'=>'array',
