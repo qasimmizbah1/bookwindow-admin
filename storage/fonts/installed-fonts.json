@@ -1,0 +1,10 @@
+{
+    "notosansdevanagari": {
+        "normal": "D:\\xampp\\htdocs\\bookwindow\\bookwindow-admin\\storage\\fonts\/notosansdevanagari_normal_f50c50c0532ab5b5ceab27f7d75d6795",
+        "bold": "notosansdevanagari_bold_d1e4e905a62d93e84ca9461f2da845f3"
+    },
+    "noto sans devanagari": {
+        "normal": "D:\\xampp\\htdocs\\bookwindow\\bookwindow-admin\\storage\\fonts\/noto_sans_devanagari_normal_f50c50c0532ab5b5ceab27f7d75d6795",
+        "bold": "noto_sans_devanagari_bold_d1e4e905a62d93e84ca9461f2da845f3"
+    }
+}

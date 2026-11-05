@@ -32,6 +32,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Forms\Components\ViewField;
+use Filament\Forms\Components\Group;
 
 class OrderResource extends Resource
 {
@@ -100,424 +101,552 @@ class OrderResource extends Resource
         return $query;
     }
 
-    public static function form(Form $form): Form
+        public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                // Use Tabs for organization
-                Tabs::make('Order Details')
-                    ->tabs([
-                        Tab::make('Customer & Order Info')
-                            ->schema([
-                                // Customer Information Section
-                                Section::make('Customer Information')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                TextInput::make('first_name')
-                                                    ->label('First Name')
-                                                    ->maxLength(100),
+                Grid::make(['default' => 1, 'lg' => 12])
+                    ->schema([
+                        // LEFT COLUMN (Main details - 8 columns on desktop)
+                        Group::make([
+                            // 1. ORDER ITEMS (Products List & Calculations)
+                            Section::make('Order Items')
+                                ->icon('heroicon-o-shopping-bag')
+                                ->schema([
+                                    Placeholder::make('items')
+                                        ->label('')
+                                        ->content(function ($record) {
+                                            if (!$record || !$record->items || $record->items->count() == 0) {
+                                                return '<div class="text-center py-8 text-gray-500 dark:text-gray-400">No items found in this order</div>';
+                                            }
+                                            
+                                            $isVendor = auth()->user()?->isVendor() ?? false;
+                                            $vendor = auth()->user()?->vendor;
 
-                                                TextInput::make('last_name')
-                                                    ->label('Last Name')
-                                                    ->maxLength(100),
+                                            $items = ($isVendor && $vendor)
+                                                ? $record->items->where('vendor_id', $vendor->id)
+                                                : $record->items;
 
-                                                TextInput::make('email')
-                                                    ->label('Email')
-                                                    ->email()
-                                                    ->maxLength(150),
+                                            if ($items->isEmpty()) {
+                                                return '<div class="text-center py-8 text-gray-500 dark:text-gray-400">No products belonging to your store found in this order.</div>';
+                                            }
 
-                                                TextInput::make('customer_phone')
-                                                    ->label('Phone Number / Mobile')
-                                                    ->tel()
-                                                    ->placeholder('e.g. 9876543210')
-                                                    ->maxLength(20),
-                                            ]),
-                                    ]),
-
-                                // Shipping Address Section
-                                Section::make('Shipping Address')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                TextInput::make('address')
-                                                    ->label('Address Line 1')
-                                                    ->columnSpanFull(),
-
-                                                TextInput::make('address_2')
-                                                    ->label('Address Line 2')
-                                                    ->columnSpanFull(),
-
-                                                TextInput::make('city')
-                                                    ->label('City'),
-
-                                                TextInput::make('district')
-                                                    ->label('District'),
-
-                                                TextInput::make('state')
-                                                    ->label('State/Province'),
-
-                                                TextInput::make('zip_code')
-                                                    ->label('Postal Code / PIN'),
-
-                                                TextInput::make('country')
-                                                    ->label('Country')
-                                                    ->default('India'),
-                                            ]),
-                                    ]),
-
-                                // Order Information Section
-                                Section::make('Order Information')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                Placeholder::make('order_number')
-                                                    ->label('Order ID')
-                                                    ->content(function ($record) {
-                                                        return $record->order_number ?? 'N/A';
-                                                    }),
-                                                
-                                                Select::make('status')
-                                                    ->label('Order Status')
-                                                    ->options([
-                                                        "new"=>"New",
-                                                        "pending"=>"Pending",
-                                                        "processing"=>"Processing",
-                                                        'order_shipped'=>"Order Shipped",
-                                                        "completed"=>"Order Completed/Delivered",
-                                                        "cancelled"=>"Order Cancelled",
-                                                        "declined"=>"Order Declined",
-                                                        "refunded"=>"Refunded",
-                                                    ])
-                                                    ->required()
-                                                    ->live()
-                                                    ->native(false),
-
-                                                Placeholder::make('cancelled_by_display')
-                                                    ->label('Cancelled By')
-                                                    ->visible(fn ($record, Forms\Get $get) => (in_array($get('status'), ['cancelled', 'declined', 'payment_cancelled']) || str_contains((string)$get('status'), 'cancel')) && !empty($record?->cancelled_by))
-                                                    ->content(function ($record) {
-                                                        return match($record?->cancelled_by) {
-                                                            'customer' => 'Customer (From User Account)',
-                                                            'admin' => 'Admin / Store Staff',
-                                                            'payment_failed' => 'Payment Cancelled / Failed at Gateway',
-                                                            default => ucfirst($record?->cancelled_by ?? 'N/A'),
-                                                        };
-                                                    }),
-
-                                                Select::make('cancellation_reason_preset')
-                                                    ->label('Cancellation Reason Preset')
-                                                    ->options([
-                                                        'Customer requested cancellation' => 'Customer requested cancellation',
-                                                        'Product out of stock' => 'Product out of stock',
-                                                        'Customer unreachable on phone' => 'Customer unreachable on phone',
-                                                        'Incorrect or incomplete delivery address' => 'Incorrect or incomplete delivery address',
-                                                        'Payment issue / Unpaid COD' => 'Payment issue / Unpaid COD',
-                                                        'Duplicate order placed by mistake' => 'Duplicate order placed by mistake',
-                                                        'Other reason' => 'Other reason (Specify in remarks below)',
-                                                    ])
-                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
-                                                    ->live()
-                                                    ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                                        if ($state && $state !== 'Other reason') {
-                                                            $set('cancellation_reason', $state);
-                                                        }
-                                                    })
-                                                    ->dehydrated(false),
-
-                                                Textarea::make('cancellation_reason')
-                                                    ->label('Cancellation Reason / Remarks')
-                                                    ->placeholder('Enter detailed reason or remark for order cancellation...')
-                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
-                                                    ->required(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
-                                                    ->rows(2)
-                                                    ->columnSpanFull(),
-
-                                                TextInput::make('tracking_id')
-                                                    ->label('Tracking ID')
-                                                    ->placeholder('e.g. DTDC12345678, EK123456789IN')
-                                                    ->live()
-                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed']))
-                                                    ->required(fn (Forms\Get $get) => $get('status') === 'order_shipped'),
-
-                                                TextInput::make('courier_partner')
-                                                    ->label('Courier Partner Name')
-                                                    ->placeholder('Enter Courier Partner Name (e.g. DTDC, India Post)')
-                                                    ->live()
-                                                    ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
-
-                                
-                                                
-                                                Placeholder::make('payment_method')
-                                                    ->label('Payment Method')
-                                                    ->content(function ($record) {
-                                                        $methods = [
-                                                            "cod"=>"Cash on Delivery",
-                                                            "card"=>"Credit Card",
-                                                            "razorpay"=>"Razorpay"
-                                                        ];
-                                                        return $methods[$record->payment_method] ?? $record->payment_method ?? 'N/A';
-                                                    }),
-                                                
-                                                Select::make('payment_status')
-                                                    ->label('Payment Status')
-                                                    ->options([
-                                                        "pending"=>"Pending",
-                                                        "paid"=>"Paid",
-                                                        "failed"=>"Failed",
-                                                        "refunded"=>"Refunded",
-                                                    ])
-                                                    ->required()
-                                                    ->native(false),
-                                                
-                                                Placeholder::make('razorpay_order_id')
-                                                    ->label('Razorpay Order ID')
-                                                    ->content(function ($record) {
-                                                        return $record->razorpay_order_id ?? 'N/A';
-                                                    })
-                                                    ->visible(fn ($record) => $record && $record->razorpay_order_id),
-                                                
-                                                Placeholder::make('razorpay_payment_id')
-                                                    ->label('Razorpay Payment ID')
-                                                    ->content(function ($record) {
-                                                        return $record->razorpay_payment_id ?? 'N/A';
-                                                    })
-                                                    ->visible(fn ($record) => $record && $record->razorpay_payment_id),
-                                            ]),
-                                    ]),
-
-                                // Order Financial Details - Show as view only
-                                Section::make('Financial Details')
-                                    ->visible(fn () => auth()->user()?->isAdmin() ?? false)
-                                    ->schema([
-                                        Grid::make(3)
-                                            ->schema([
-                                                Placeholder::make('subtotal')
-                                                    ->label('Subtotal')
-                                                    ->content(function ($record) {
-                                                        return format_currency($record->subtotal ?? 0, 2);
-                                                    }),
-                                                
-                                                Placeholder::make('discount_amount')
-                                                    ->label('Discount')
-                                                    ->content(function ($record) {
-                                                        return format_currency($record->discount_amount ?? 0, 2);
-                                                    }),
-                                                
-                                                Placeholder::make('tax_amount')
-                                                    ->label('Tax')
-                                                    ->content(function ($record) {
-                                                        return format_currency($record->tax_amount ?? 0, 2);
-                                                    }),
-                                                
-                                                Placeholder::make('shipping_amount')
-                                                    ->label('Shipping Cost')
-                                                    ->content(function ($record) {
-                                                        return format_currency($record->shipping_amount ?? 0, 2);
-                                                    }),
-                                                
-                                                Placeholder::make('delivery_amount')
-                                                    ->label('COD')
-                                                    ->visible(fn ($record) => $record && (strtolower($record->payment_method ?? '') === 'cod' || ($record->delivery_amount ?? 0) > 0))
-                                                    ->content(function ($record) {
-                                                        return format_currency($record->delivery_amount ?? 0, 2);
-                                                    }),
-                                                
-                                                Placeholder::make('total_amount')
-                                                    ->label('Total Amount')
-                                                    ->content(function ($record) {
-                                                        return format_currency($record->total_amount ?? 0, 2);
-                                                    }),
-                                            ]),
-                                    ]),
-
-                                // Additional Information - Show as view only
-                                Section::make('Additional Information')
-                                    ->schema([
-                                        Grid::make(2)
-                                            ->schema([
-                                                Placeholder::make('shipping_method')
-                                                    ->label('Shipping Method')
-                                                    ->content(function ($record) {
-                                                        return $record->shipping_method ?? 'N/A';
-                                                    }),
-                                                
-                                                Placeholder::make('coupon_code')
-                                                    ->label('Coupon Code')
-                                                    ->content(function ($record) {
-                                                        return $record->coupon_code ?? 'N/A';
-                                                    }),
-                                                
-                                                Placeholder::make('notes')
-                                                    ->label('Order Notes (Customer)')
-                                                    ->content(function ($record) {
-                                                        return $record->notes ?? 'No notes';
-                                                    })
-                                                    ->columnSpanFull(),
-                                            ]),
-                                    ]),
-
-                                // Admin Remarks & Internal Comments Section
-                                Section::make('Admin Remarks & Internal Comments')
-                                    ->description('Internal staff comments and order remarks (not visible to customer).')
-                                    ->schema([
-                                        Textarea::make('admin_remark')
-                                            ->label('Order Remark / Comment')
-                                            ->placeholder('Add internal staff notes or comments about this order...')
-                                            ->rows(3)
-                                            ->columnSpanFull(),
-                                    ]),
-                            ]),
-                        
-                        Tab::make('Products / Items')
-                            ->schema([
-                                Section::make('Order Items')
-                                    ->schema([
-                                        // Display items as a formatted table with proper styling
-                                        Placeholder::make('items')
-                                            ->label('')
-                                            ->content(function ($record) {
-                                                if (!$record || !$record->items || $record->items->count() == 0) {
-                                                    return '<div class="text-center text-gray-500 py-8">No items found in this order</div>';
+                                            $html = '<style>
+                                                .bw-table-box {
+                                                    border-radius: 8px;
+                                                    overflow: hidden;
+                                                    border: 1px solid #e5e7eb;
+                                                    background: #ffffff;
                                                 }
-                                                
-                                                $isVendor = auth()->user()?->isVendor() ?? false;
-                                                $vendor = auth()->user()?->vendor;
-
-                                                $items = ($isVendor && $vendor)
-                                                    ? $record->items->where('vendor_id', $vendor->id)
-                                                    : $record->items;
-
-                                                if ($items->isEmpty()) {
-                                                    return '<div class="text-center text-gray-500 py-8">No products belonging to your store found in this order.</div>';
+                                                .bw-table-box table {
+                                                    width: 100%;
+                                                    border-collapse: collapse;
+                                                }
+                                                .bw-table-box th {
+                                                    background: #f9fafb;
+                                                    border-bottom: 1px solid #e5e7eb;
+                                                    color: #4b5563;
+                                                    font-size: 11px;
+                                                    font-weight: 600;
+                                                    text-transform: uppercase;
+                                                    letter-spacing: 0.05em;
+                                                    padding: 10px 12px;
+                                                }
+                                                .bw-table-box td {
+                                                    border-bottom: 1px solid #f3f4f6;
+                                                    padding: 10px 12px;
+                                                    color: #1f2937;
+                                                    font-size: 13px;
+                                                }
+                                                .bw-pname {
+                                                    color: #111827;
+                                                    font-size: 13px;
+                                                    font-weight: 600;
+                                                    line-height: 1.4;
+                                                }
+                                                .bw-pmodel {
+                                                    color: #6b7280;
+                                                    font-size: 11px;
+                                                    font-family: monospace;
+                                                    margin-top: 2px;
+                                                }
+                                                .bw-calc-card {
+                                                    margin-top: 14px;
+                                                    background: #f9fafb;
+                                                    border: 1px solid #e5e7eb;
+                                                    border-radius: 8px;
+                                                    padding: 14px;
+                                                }
+                                                .bw-calc-row {
+                                                    display: flex;
+                                                    justify-content: space-between;
+                                                    padding: 6px 0;
+                                                    border-bottom: 1px solid #e5e7eb;
+                                                    color: #4b5563;
+                                                    font-size: 12px;
+                                                }
+                                                .bw-calc-val {
+                                                    font-weight: 600;
+                                                    color: #111827;
+                                                }
+                                                .bw-calc-total {
+                                                    display: flex;
+                                                    justify-content: space-between;
+                                                    padding-top: 10px;
+                                                    font-size: 15px;
+                                                    font-weight: bold;
+                                                    color: #111827;
+                                                }
+                                                .bw-total-amt {
+                                                    color: #059669;
+                                                    font-size: 18px;
                                                 }
 
-                                                $html = '<div class="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-200">
-                                                    <table class="w-full border-collapse">
-                                                        <thead>
-                                                            <tr class="bg-gray-50 border-b border-gray-200">
-                                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
-                                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Price</th>
-                                                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody class="divide-y divide-gray-200">';
-                                                
-                                                $rawItemsTotal = $items->sum(function ($item) {
-                                                    return ($item->quantity ?? 1) * ($item->price ?? 0);
-                                                });
-
-                                                // Handle legacy orders where coupon discount was mistakenly deducted from line item prices
-                                                $isLegacyDiscounted = ($record && (float)($record->discount_amount ?? 0) > 0 && $rawItemsTotal > 0 && abs(($rawItemsTotal + (float)$record->discount_amount) - (float)($record->subtotal ?? 0)) < 0.05);
-                                                $subtotalRatio = ($isLegacyDiscounted && $rawItemsTotal > 0) ? ((float)$record->subtotal / $rawItemsTotal) : 1.0;
-
-                                                $counter = 1;
-                                                foreach ($items as $item) {
-                                                    $productName = $item->product ? $item->product->name : ($item->product_name ?? 'Product #' . $item->product_id);
-                                                    $unitPrice = $isLegacyDiscounted ? round(($item->price ?? 0) * $subtotalRatio, 2) : ($item->price ?? 0);
-                                                    $subtotal = ($item->quantity ?? 1) * $unitPrice;
-                                                    $html .= '<tr class="transition-colors duration-150">
-                                                        <td class="px-4 py-3 text-sm text-gray-500">' . $counter . '</td>
-                                                        <td class="px-4 py-3 text-sm font-medium text-gray-700">' . e($productName) . '</td>
-                                                        <td class="px-4 py-3 text-sm font-medium text-gray-700">' . e($item->product->model ?? '') . '</td>
-                                                        <td class="px-4 py-3 text-sm text-center text-gray-700">' . ($item->quantity ?? 1) . '</td>
-                                                        <td class="px-4 py-3 text-sm text-right text-gray-700">' . format_currency($unitPrice, 2) . '</td>
-                                                        <td class="px-4 py-3 text-sm text-right font-semibold text-gray-700">' . format_currency($subtotal, 2) . '</td>
-                                                    </tr>';
-                                                    $counter++;
+                                                /* DARK MODE ADAPTATION */
+                                                .dark .bw-table-box {
+                                                    border-color: rgba(255, 255, 255, 0.08);
+                                                    background: rgba(0, 0, 0, 0.25);
                                                 }
-                                                
-                                                $html .= '</tbody></table></div>';
-                                                
-                                                $totalItems = $items->sum('quantity');
-                                                $displaySubtotal = ($record && $record->subtotal && (float)$record->subtotal > 0)
-                                                    ? (float)$record->subtotal
-                                                    : $rawItemsTotal;
-                                                $totalAmount = $displaySubtotal;
-                                                
-                                                if ($isVendor) {
-                                                    $commissionRate = $vendor->commission_rate;
-                                                    $gstRate = $vendor->commission_gst_rate;
-                                                    $commissionAmount = $vendor->calculateCommissionFee($totalAmount);
-                                                    $gstAmount = $vendor->calculateCommissionGst($totalAmount);
-                                                    $totalDeduction = $vendor->calculateTotalDeduction($totalAmount);
-                                                    $netEarnings = $vendor->calculateVendorPayout($totalAmount);
+                                                .dark .bw-table-box th {
+                                                    background: rgba(255, 255, 255, 0.04);
+                                                    border-color: rgba(255, 255, 255, 0.08);
+                                                    color: #9ca3af;
+                                                }
+                                                .dark .bw-table-box td {
+                                                    border-color: rgba(255, 255, 255, 0.05);
+                                                    color: #f3f4f6;
+                                                }
+                                                .dark .bw-pname {
+                                                    color: #f9fafb;
+                                                }
+                                                .dark .bw-pmodel {
+                                                    color: #9ca3af;
+                                                }
+                                                .dark .bw-calc-card {
+                                                    background: rgba(255, 255, 255, 0.03);
+                                                    border-color: rgba(255, 255, 255, 0.08);
+                                                }
+                                                .dark .bw-calc-row {
+                                                    border-color: rgba(255, 255, 255, 0.06);
+                                                    color: #9ca3af;
+                                                }
+                                                .dark .bw-calc-val {
+                                                    color: #f3f4f6;
+                                                }
+                                                .dark .bw-calc-total {
+                                                    color: #f3f4f6;
+                                                }
+                                                .dark .bw-total-amt {
+                                                    color: #10b981;
+                                                }
+                                            </style>';
 
-                                                    $html .= '<div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
-                                                        <div class="max-w-md ml-auto">
-                                                            <div class="flex justify-between py-2 border-b border-gray-200">
-                                                                <span class="text-sm font-medium text-gray-600">Your Items Total:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . $totalItems . ' item(s)</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200">
-                                                                <span class="text-sm font-medium text-gray-600">Gross Sales Amount:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($totalAmount, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200 text-amber-700">
-                                                                <span class="text-sm font-medium">Platform Fee (' . $commissionRate . '%):</span>
-                                                                <span class="text-sm font-semibold">-' . format_currency($commissionAmount, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200 text-amber-700">
-                                                                <span class="text-sm font-medium">GST on Fee (' . $gstRate . '%):</span>
-                                                                <span class="text-sm font-semibold">-' . format_currency($gstAmount, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200 text-red-700 font-medium">
-                                                                <span class="text-sm font-semibold">Total Platform Charges:</span>
-                                                                <span class="text-sm font-bold">-' . format_currency($totalDeduction, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between pt-3 mt-1">
-                                                                <span class="text-base font-bold text-gray-800">Your Net Payout:</span>
-                                                                <span class="text-xl font-bold text-emerald-600">' . format_currency($netEarnings, 2) . '</span>
-                                                            </div>
+                                            $html .= '<div class="bw-table-box">
+                                                <table>
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="text-align: center; width: 35px;">#</th>
+                                                            <th style="text-align: left;">Product</th>
+                                                            <th style="text-align: center; width: 60px;">Qty</th>
+                                                            <th style="text-align: right; width: 90px;">Price</th>
+                                                            <th style="text-align: right; width: 100px;">Total</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>';
+                                            
+                                            $rawItemsTotal = $items->sum(function ($item) {
+                                                return ($item->quantity ?? 1) * ($item->price ?? 0);
+                                            });
+
+                                            // Handle legacy orders where coupon discount was mistakenly deducted from line item prices
+                                            $isLegacyDiscounted = ($record && (float)($record->discount_amount ?? 0) > 0 && $rawItemsTotal > 0 && abs(($rawItemsTotal + (float)$record->discount_amount) - (float)($record->subtotal ?? 0)) < 0.05);
+                                            $subtotalRatio = ($isLegacyDiscounted && $rawItemsTotal > 0) ? ((float)$record->subtotal / $rawItemsTotal) : 1.0;
+
+                                            $counter = 1;
+                                            foreach ($items as $item) {
+                                                $product = $item->product;
+                                                $productName = $product ? $product->name : ($item->product_name ?? 'Product #' . $item->product_id);
+                                                $productModel = $product?->model ?? '';
+                                                $unitPrice = $isLegacyDiscounted ? round(($item->price ?? 0) * $subtotalRatio, 2) : ($item->price ?? 0);
+                                                $subtotal = ($item->quantity ?? 1) * $unitPrice;
+
+                                                $html .= '<tr>
+                                                    <td style="text-align: center; color: #9ca3af; font-size: 12px;">' . $counter . '</td>
+                                                    <td>
+                                                        <div class="bw-pname">' . e($productName) . '</div>
+                                                        ' . ($productModel ? '<div class="bw-pmodel">' . e($productModel) . '</div>' : '') . '
+                                                    </td>
+                                                    <td style="text-align: center; font-weight: 600;">' . ($item->quantity ?? 1) . '</td>
+                                                    <td style="text-align: right; white-space: nowrap;">' . format_currency($unitPrice, 2) . '</td>
+                                                    <td style="text-align: right; font-weight: bold; white-space: nowrap;">' . format_currency($subtotal, 2) . '</td>
+                                                </tr>';
+                                                $counter++;
+                                            }
+                                            
+                                            $html .= '</tbody></table></div>';
+                                            
+                                            $totalItems = $items->sum('quantity');
+                                            $displaySubtotal = ($record && $record->subtotal && (float)$record->subtotal > 0)
+                                                ? (float)$record->subtotal
+                                                : $rawItemsTotal;
+                                            $totalAmount = $displaySubtotal;
+                                            
+                                            if ($isVendor) {
+                                                $commissionRate = $vendor->commission_rate;
+                                                $gstRate = $vendor->commission_gst_rate;
+                                                $commissionAmount = $vendor->calculateCommissionFee($totalAmount);
+                                                $gstAmount = $vendor->calculateCommissionGst($totalAmount);
+                                                $totalDeduction = $vendor->calculateTotalDeduction($totalAmount);
+                                                $netEarnings = $vendor->calculateVendorPayout($totalAmount);
+
+                                                $html .= '<div class="bw-calc-card">
+                                                    <div style="max-width: 300px; margin-left: auto;">
+                                                        <div class="bw-calc-row">
+                                                            <span>Your Items Total:</span>
+                                                            <span class="bw-calc-val">' . $totalItems . ' item(s)</span>
                                                         </div>
-                                                    </div>';
-                                                } else {
-                                                    $html .= '<div class="mt-6 bg-gray-50 rounded-lg p-6 border border-gray-200">
-                                                        <div class="max-w-md ml-auto">
-                                                            <div class="flex justify-between py-2 border-b border-gray-200">
-                                                                <span class="text-sm font-medium text-gray-600">Total Items:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . $totalItems . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200">
-                                                                <span class="text-sm font-medium text-gray-600">Items Subtotal:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($displaySubtotal, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200">
-                                                                <span class="text-sm font-medium text-gray-600">Shipping:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($record->shipping_amount ?? 0, 2) . '</span>
-                                                            </div>';
-
-                                                    if ($record && (strtolower($record->payment_method ?? '') === 'cod' || ($record->delivery_amount ?? 0) > 0)) {
-                                                        $html .= '<div class="flex justify-between py-2 border-b border-gray-200">
-                                                            <span class="text-sm font-medium text-gray-600">COD:</span>
-                                                            <span class="text-sm font-semibold text-gray-700">' . format_currency($record->delivery_amount ?? 0, 2) . '</span>
+                                                        <div class="bw-calc-row">
+                                                            <span>Gross Sales:</span>
+                                                            <span class="bw-calc-val">' . format_currency($totalAmount, 2) . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-row" style="color: #d97706;">
+                                                            <span>Platform Fee (' . $commissionRate . '%):</span>
+                                                            <span style="font-weight: 600;">-' . format_currency($commissionAmount, 2) . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-row" style="color: #d97706;">
+                                                            <span>GST on Fee (' . $gstRate . '%):</span>
+                                                            <span style="font-weight: 600;">-' . format_currency($gstAmount, 2) . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-row" style="color: #dc2626;">
+                                                            <span>Total Charges:</span>
+                                                            <span style="font-weight: bold;">-' . format_currency($totalDeduction, 2) . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-total">
+                                                            <span>Net Payout:</span>
+                                                            <span class="bw-total-amt">' . format_currency($netEarnings, 2) . '</span>
+                                                        </div>
+                                                    </div>
+                                                </div>';
+                                            } else {
+                                                $html .= '<div class="bw-calc-card">
+                                                    <div style="max-width: 300px; margin-left: auto;">
+                                                        <div class="bw-calc-row">
+                                                            <span>Total Items:</span>
+                                                            <span class="bw-calc-val">' . $totalItems . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-row">
+                                                            <span>Items Subtotal:</span>
+                                                            <span class="bw-calc-val">' . format_currency($displaySubtotal, 2) . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-row">
+                                                            <span>Shipping:</span>
+                                                            <span class="bw-calc-val">' . format_currency($record->shipping_amount ?? 0, 2) . '</span>
                                                         </div>';
-                                                    }
 
-                                                    $html .= '<div class="flex justify-between py-2 border-b border-gray-200">
-                                                                <span class="text-sm font-medium text-gray-600">Discount:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">-' . format_currency($record->discount_amount ?? 0, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between py-2 border-b border-gray-200">
-                                                                <span class="text-sm font-medium text-gray-600">Tax:</span>
-                                                                <span class="text-sm font-semibold text-gray-700">' . format_currency($record->tax_amount ?? 0, 2) . '</span>
-                                                            </div>
-                                                            <div class="flex justify-between pt-3 mt-1">
-                                                                <span class="text-base font-bold text-gray-700">Grand Total:</span>
-                                                                <span class="text-xl font-bold text-gray-700">' . format_currency($record->total_amount ?? 0, 2) . '</span>
-                                                            </div>
-                                                        </div>
+                                                if ($record && (strtolower($record->payment_method ?? '') === 'cod' || ($record->delivery_amount ?? 0) > 0)) {
+                                                    $html .= '<div class="bw-calc-row">
+                                                        <span>COD Fee:</span>
+                                                        <span class="bw-calc-val">' . format_currency($record->delivery_amount ?? 0, 2) . '</span>
                                                     </div>';
                                                 }
-                                                
-                                                return new \Illuminate\Support\HtmlString($html);
-                                            })
-                                            ->columnSpanFull(),
-                                    ]),
-                            ]),
+
+                                                $html .= '<div class="bw-calc-row" style="color: #d97706;">
+                                                            <span>Discount:</span>
+                                                            <span style="font-weight: 600;">-' . format_currency($record->discount_amount ?? 0, 2) . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-row">
+                                                            <span>Tax:</span>
+                                                            <span class="bw-calc-val">' . format_currency($record->tax_amount ?? 0, 2) . '</span>
+                                                        </div>
+                                                        <div class="bw-calc-total">
+                                                            <span>Grand Total:</span>
+                                                            <span class="bw-total-amt">' . format_currency($record->total_amount ?? 0, 2) . '</span>
+                                                        </div>
+                                                    </div>
+                                                </div>';
+                                            }
+                                            
+                                            return new \Illuminate\Support\HtmlString($html);
+                                        })
+                                        ->columnSpanFull(),
+                                ]),
+
+                            // 2. CUSTOMER INFORMATION
+                            Section::make('Customer Information')
+                                ->icon('heroicon-o-user')
+                                ->schema([
+                                    Grid::make(2)
+                                        ->schema([
+                                            TextInput::make('first_name')
+                                                ->label('First Name')
+                                                ->readOnly()
+                                                ->maxLength(100),
+
+                                            TextInput::make('last_name')
+                                                ->label('Last Name')
+                                                ->readOnly()
+                                                ->maxLength(100),
+
+                                            TextInput::make('email')
+                                                ->label('Email')
+                                                ->email()
+                                                ->readOnly()
+                                                ->maxLength(150),
+
+                                            TextInput::make('customer_phone')
+                                                ->label('Phone Number / Mobile')
+                                                ->tel()
+                                                ->readOnly()
+                                                ->placeholder('e.g. 9876543210')
+                                                ->maxLength(20),
+                                        ]),
+                                ]),
+
+                            // 3. SHIPPING ADDRESS
+                            Section::make('Shipping Address')
+                                ->icon('heroicon-o-map-pin')
+                                ->schema([
+                                    Grid::make(2)
+                                        ->schema([
+                                            TextInput::make('address')
+                                                ->label('Address Line 1')
+                                                ->columnSpanFull(),
+
+                                            TextInput::make('address_2')
+                                                ->label('Address Line 2')
+                                                ->columnSpanFull(),
+
+                                            TextInput::make('city')
+                                                ->label('City'),
+
+                                            TextInput::make('district')
+                                                ->label('District'),
+
+                                            TextInput::make('state')
+                                                ->label('State/Province'),
+
+                                            TextInput::make('zip_code')
+                                                ->label('Postal Code / PIN'),
+
+                                            TextInput::make('country')
+                                                ->label('Country')
+                                                ->default('India'),
+                                        ]),
+                                ]),
+
+                            // 4. ADMIN REMARKS & INTERNAL COMMENTS
+                            Section::make('Admin Remarks & Internal Comments')
+                                ->description('Internal staff comments and order remarks (not visible to customer).')
+                                ->icon('heroicon-o-chat-bubble-bottom-center-text')
+                                ->schema([
+                                    Textarea::make('admin_remark')
+                                        ->label('Order Remark / Comment')
+                                        ->placeholder('Add internal staff notes or comments about this order...')
+                                        ->rows(3)
+                                        ->columnSpanFull(),
+                                ]),
+                        ])
+                        ->columnSpan(['default' => 12, 'lg' => 8]),
+
+                        // RIGHT COLUMN (Sidebar - 4 columns on desktop)
+                        Group::make([
+                            // 1. CALL VERIFICATION (Task 1)
+                            Section::make('Call Verification')
+                                ->description('Telecalling confirmation separate from order status.')
+                                ->icon('heroicon-o-phone')
+                                ->schema([
+                                    Placeholder::make('quick_call_link')
+                                        ->label('Quick Dial')
+                                        ->content(function ($record) {
+                                            if (!$record || empty($record->customer_phone)) {
+                                                return new \Illuminate\Support\HtmlString('<span style="font-size:12px; color:#9ca3af;">No phone number available</span>');
+                                            }
+                                            $rawPhone = $record->customer_phone;
+                                            $cleanPhone = preg_replace('/[^0-9+]/', '', $rawPhone);
+                                            $displayPhone = e(Order::formatPhoneNumber($rawPhone));
+                                            $telHref = 'tel:' . e($cleanPhone);
+
+                                            return new \Illuminate\Support\HtmlString('
+                                                <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:#f0fdf4; border-radius:8px;" class="bw-quick-dial-box">
+                                                    <style>
+                                                        .dark .bw-quick-dial-box { background: rgba(6, 78, 59, 0.25) !important; }
+                                                        .bw-call-btn:hover { background-color: #059669 !important; transform: scale(1.02); }
+                                                        .bw-phone-link:hover { text-decoration: underline !important; }
+                                                    </style>
+                                                    <div>
+                                                        <div style="font-size:11px; font-weight:600; color:#047857; text-transform:uppercase; letter-spacing:0.5px;">Customer Mobile</div>
+                                                        <a href="' . $telHref . '" class="bw-phone-link" style="font-size:15px; font-weight:700; color:#10b981; text-decoration:none;">' . $displayPhone . '</a>
+                                                    </div>
+                                                    <a href="' . $telHref . '" class="bw-call-btn" style="display:inline-flex; align-items:center; gap:6px; background-color:#10b981; color:#ffffff; font-size:12px; font-weight:600; padding:7px 14px; border-radius:6px; text-decoration:none; transition: all 0.15s ease; cursor:pointer;">
+                                                        <svg style="width:14px; height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                                                        </svg>
+                                                        <span>Click to Call</span>
+                                                    </a>
+                                                </div>
+                                            ');
+                                        }),
+
+                                    Select::make('call_status')
+                                        ->label('Call Status')
+                                        ->options(Order::getCallStatuses())
+                                        ->default('pending')
+                                        ->required()
+                                        ->native(false),
+
+                                    Textarea::make('call_notes')
+                                        ->label('Call Notes / Remarks')
+                                        ->placeholder('e.g. Customer ne bola dispatch kardo...')
+                                        ->rows(2),
+
+                                    Placeholder::make('called_at_display')
+                                        ->label('Last Called At')
+                                        ->content(fn ($record) => $record?->called_at ? \Illuminate\Support\Carbon::parse($record->called_at)->format('M d, Y h:i A') : 'Not called yet')
+                                        ->visible(fn ($record) => $record && $record->called_at),
+                                ]),
+
+                            // 2. ORDER INFORMATION & STATUS
+                            Section::make('Order Information')
+                                ->icon('heroicon-o-cog-6-tooth')
+                                ->schema([
+                                    Placeholder::make('order_number')
+                                        ->label('Order ID')
+                                        ->content(function ($record) {
+                                            return $record->order_number ?? 'N/A';
+                                        }),
+                                    
+                                    Select::make('status')
+                                        ->label('Order Status')
+                                        ->options([
+                                            "new"=>"New",
+                                            "pending"=>"Pending",
+                                            "processing"=>"Processing",
+                                            'order_shipped'=>"Order Shipped",
+                                            "completed"=>"Order Completed/Delivered",
+                                            "cancelled"=>"Order Cancelled",
+                                            "declined"=>"Order Declined",
+                                            "refunded"=>"Refunded",
+                                        ])
+                                        ->required()
+                                        ->live()
+                                        ->native(false),
+
+                                    Placeholder::make('cancelled_by_display')
+                                        ->label('Cancelled By')
+                                        ->visible(fn ($record, Forms\Get $get) => (in_array($get('status'), ['cancelled', 'declined', 'payment_cancelled']) || str_contains((string)$get('status'), 'cancel')) && !empty($record?->cancelled_by))
+                                        ->content(function ($record) {
+                                            return match($record?->cancelled_by) {
+                                                'customer' => 'Customer (From User Account)',
+                                                'admin' => 'Admin / Store Staff',
+                                                'payment_failed' => 'Payment Cancelled / Failed at Gateway',
+                                                default => ucfirst($record?->cancelled_by ?? 'N/A'),
+                                            };
+                                        }),
+
+                                    Select::make('cancellation_reason_preset')
+                                        ->label('Cancellation Reason Preset')
+                                        ->options([
+                                            'Customer requested cancellation' => 'Customer requested cancellation',
+                                            'Product out of stock' => 'Product out of stock',
+                                            'Customer unreachable on phone' => 'Customer unreachable on phone',
+                                            'Incorrect or incomplete delivery address' => 'Incorrect or incomplete delivery address',
+                                            'Payment issue / Unpaid COD' => 'Payment issue / Unpaid COD',
+                                            'Duplicate order placed by mistake' => 'Duplicate order placed by mistake',
+                                            'Other reason' => 'Other reason (Specify in remarks below)',
+                                        ])
+                                        ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                        ->live()
+                                        ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                            if ($state && $state !== 'Other reason') {
+                                                $set('cancellation_reason', $state);
+                                            }
+                                        })
+                                        ->dehydrated(false),
+
+                                    Textarea::make('cancellation_reason')
+                                        ->label('Cancellation Reason / Remarks')
+                                        ->placeholder('Enter detailed reason or remark for order cancellation...')
+                                        ->visible(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                        ->required(fn (Forms\Get $get) => in_array($get('status'), ['cancelled', 'declined']))
+                                        ->rows(2)
+                                        ->columnSpanFull(),
+
+                                    TextInput::make('courier_partner')
+                                        ->label('Courier Partner Name')
+                                        ->placeholder('Enter Courier Partner Name (e.g. DTDC, India Post)')
+                                        ->live()
+                                        ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed'])),
+
+                                    TextInput::make('tracking_id')
+                                        ->label('Tracking ID')
+                                        ->placeholder('e.g. DTDC12345678, EK123456789IN')
+                                        ->live()
+                                        ->visible(fn (Forms\Get $get) => in_array($get('status'), ['order_shipped', 'completed']))
+                                        ->required(fn (Forms\Get $get) => $get('status') === 'order_shipped'),
+
+                                    Placeholder::make('payment_method')
+                                        ->label('Payment Method')
+                                        ->content(function ($record) {
+                                            $methods = [
+                                                "cod"=>"Cash on Delivery",
+                                                "card"=>"Credit Card",
+                                                "razorpay"=>"Razorpay"
+                                            ];
+                                            return $methods[$record->payment_method] ?? $record->payment_method ?? 'N/A';
+                                        }),
+                                    
+                                    Select::make('payment_status')
+                                        ->label('Payment Status')
+                                        ->options([
+                                            "pending"=>"Pending",
+                                            "paid"=>"Paid",
+                                            "failed"=>"Failed",
+                                            "refunded"=>"Refunded",
+                                        ])
+                                        ->required()
+                                        ->native(false),
+                                    
+                                    Placeholder::make('razorpay_order_id')
+                                        ->label('Razorpay Order ID')
+                                        ->content(function ($record) {
+                                            return $record->razorpay_order_id ?? 'N/A';
+                                        })
+                                        ->visible(fn ($record) => $record && $record->razorpay_order_id),
+                                    
+                                    Placeholder::make('razorpay_payment_id')
+                                        ->label('Razorpay Payment ID')
+                                        ->content(function ($record) {
+                                            return $record->razorpay_payment_id ?? 'N/A';
+                                        })
+                                        ->visible(fn ($record) => $record && $record->razorpay_payment_id),
+                                ]),
+
+                            // 3. ADDITIONAL INFORMATION (Collapsible)
+                            Section::make('Additional Information')
+                                ->collapsible()
+                                ->collapsed()
+                                ->schema([
+                                    Placeholder::make('shipping_method')
+                                        ->label('Shipping Method')
+                                        ->content(function ($record) {
+                                            return $record->shipping_method ?? 'N/A';
+                                        }),
+                                    
+                                    Placeholder::make('coupon_code')
+                                        ->label('Coupon Code')
+                                        ->content(function ($record) {
+                                            return $record->coupon_code ?? 'N/A';
+                                        }),
+                                    
+                                    Placeholder::make('notes')
+                                        ->label('Order Notes (Customer)')
+                                        ->content(function ($record) {
+                                            return $record->notes ?? 'No notes';
+                                        })
+                                        ->columnSpanFull(),
+                                ]),
+                        ])
+                        ->columnSpan(['default' => 12, 'lg' => 4]),
                     ])
                     ->columnSpanFull(),
             ]);
@@ -568,6 +697,37 @@ class OrderResource extends Resource
                     })
                     ->copyable()
                     ->copyMessage('Phone number copied')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('call_status')
+                    ->label('Call Status')
+                    ->badge()
+                    ->colors([
+                        'warning' => 'pending',
+                        'success' => 'confirmed',
+                        'danger' => fn ($state) => in_array($state, ['cancelled_by_customer', 'wrong_number']),
+                        'amber' => 'not_picked',
+                        'info' => 'call_again',
+                    ])
+                    ->icons([
+                        'heroicon-o-phone-arrow-up-right' => 'pending',
+                        'heroicon-o-check-circle' => 'confirmed',
+                        'heroicon-o-phone-x-mark' => 'not_picked',
+                        'heroicon-o-clock' => 'call_again',
+                        'heroicon-o-x-circle' => 'cancelled_by_customer',
+                        'heroicon-o-no-symbol' => 'wrong_number',
+                    ])
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'confirmed' => 'Confirmed',
+                        'not_picked' => 'Not Picked',
+                        'call_again' => 'Call Again',
+                        'cancelled_by_customer' => 'Cancelled',
+                        'wrong_number' => 'Wrong No.',
+                        default => 'To Call',
+                    })
+                    ->description(fn ($record) => $record->call_notes ? Str::limit($record->call_notes, 25) : null)
+                    ->tooltip(fn ($record) => $record->call_notes ? "Call Notes: {$record->call_notes}" : null)
+                    ->sortable()
                     ->toggleable(),
                 
                 // Tables\Columns\TextColumn::make('city')
@@ -835,6 +995,10 @@ class OrderResource extends Resource
                             );
                     }),
                 
+                Tables\Filters\SelectFilter::make('call_status')
+                    ->label('Call Status')
+                    ->options(Order::getCallStatuses()),
+
                 TrashedFilter::make(),
             ])
             ->actions([
@@ -851,6 +1015,45 @@ class OrderResource extends Resource
                     Tables\Actions\DeleteAction::make()
                         ->label('Delete')
                         ->visible(fn () => auth()->user()?->isAdmin() ?? false),
+
+                    // Quick action to update Call Status
+                    Tables\Actions\Action::make('updateCallStatus')
+                        ->label('Call Verification')
+                        ->icon('heroicon-o-phone')
+                        ->color('success')
+                        ->mountUsing(function (Forms\ComponentContainer $form, $record) {
+                            $form->fill([
+                                'call_status' => $record->call_status ?? 'pending',
+                                'call_notes' => $record->call_notes,
+                            ]);
+                        })
+                        ->form([
+                            Placeholder::make('customer_contact')
+                                ->label('Customer Phone')
+                                ->content(fn ($record) => new \Illuminate\Support\HtmlString(
+                                    '<div class="text-base">📞 <a href="tel:' . e($record->customer_phone) . '" class="text-emerald-600 font-bold hover:underline">' . e($record->customer_phone) . '</a> <span class="text-gray-500 font-normal">(' . e($record->full_name) . ')</span></div>'
+                                )),
+                            Select::make('call_status')
+                                ->label('Call Status')
+                                ->options(Order::getCallStatuses())
+                                ->required()
+                                ->native(false),
+                            Textarea::make('call_notes')
+                                ->label('Call Notes / Remarks')
+                                ->placeholder('Add notes from the call with customer...')
+                                ->rows(2),
+                        ])
+                        ->action(function ($record, array $data) {
+                            if ($data['call_status'] !== 'pending' && empty($record->called_at)) {
+                                $data['called_at'] = now();
+                            }
+                            $record->update($data);
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Call status updated successfully')
+                                ->success()
+                                ->send();
+                        }),
 
                     // Quick action to edit shipping address & phone
                     Tables\Actions\Action::make('editAddress')

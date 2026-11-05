@@ -32,6 +32,9 @@ class Order extends Model
         'razorpay_payment_id',
         'payment_status',
         'status',
+        'call_status',
+        'call_notes',
+        'called_at',
         'shipping_method',
         'address',
         'address_2',
@@ -49,7 +52,30 @@ class Order extends Model
         'tracking_id',
         'courier_partner',
     ];
+
+    protected $casts = [
+        'called_at' => 'datetime',
+    ];
     
+
+    public const CALL_STATUS_PENDING = 'pending';
+    public const CALL_STATUS_CONFIRMED = 'confirmed';
+    public const CALL_STATUS_NOT_PICKED = 'not_picked';
+    public const CALL_STATUS_CALL_AGAIN = 'call_again';
+    public const CALL_STATUS_CANCELLED = 'cancelled_by_customer';
+    public const CALL_STATUS_WRONG_NUMBER = 'wrong_number';
+
+    public static function getCallStatuses(): array
+    {
+        return [
+            self::CALL_STATUS_PENDING => 'To Call / Pending',
+            self::CALL_STATUS_CONFIRMED => 'Confirmed on Call',
+            self::CALL_STATUS_NOT_PICKED => 'Not Picked',
+            self::CALL_STATUS_CALL_AGAIN => 'Call Again / Busy',
+            self::CALL_STATUS_CANCELLED => 'Cancelled on Call',
+            self::CALL_STATUS_WRONG_NUMBER => 'Wrong / Invalid Number',
+        ];
+    }
 
     public function customer(): BelongsTo
     {

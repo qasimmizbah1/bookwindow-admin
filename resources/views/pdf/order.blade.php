@@ -4,9 +4,27 @@
 <meta charset="utf-8">
 <title>Invoice - {{ $order->order_number }}</title>
 
+<!-- Google Font for Browser Print Preview -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+
 <style>
+@font-face {
+    font-family: 'Noto Sans Devanagari';
+    font-style: normal;
+    font-weight: normal;
+    src: url('{{ str_replace('\\', '/', storage_path('fonts/NotoSansDevanagari-Regular.ttf')) }}') format('truetype');
+}
+@font-face {
+    font-family: 'Noto Sans Devanagari';
+    font-style: normal;
+    font-weight: bold;
+    src: url('{{ str_replace('\\', '/', storage_path('fonts/NotoSansDevanagari-Bold.ttf')) }}') format('truetype');
+}
+
 body {
-    font-family: DejaVu Sans, sans-serif;
+    font-family: 'Noto Sans Devanagari', DejaVu Sans, sans-serif;
     font-size: 13px;
     color: #333;
     line-height: 1.4;
@@ -14,9 +32,27 @@ body {
 
 .header {
     text-align: center;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 10px;
+    padding-bottom: 8px;
     margin-bottom: 10px;
+}
+
+.order-meta-box {
+    width: 100%;
+    margin-bottom: 15px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+}
+
+.order-meta-box td {
+    border: none;
+    padding: 8px 12px;
+    vertical-align: middle;
+}
+
+.order-id-highlight {
+    font-size: 15px;
+    font-weight: bold;
+    color: #111;
 }
 
 .logo {
@@ -31,18 +67,19 @@ body {
 
 .details-section td {
     vertical-align: top;
-    padding: 0;
     border: none;
 }
 
-.deliver-to {
+.details-section td.deliver-to {
     width: 50%;
     padding-right: 20px;
+    padding-left: 0;
 }
 
-.shipping-from {
+.details-section td.shipping-from {
     width: 50%;
     padding-left: 20px;
+    padding-right: 0;
 }
 
 h4 {
@@ -124,16 +161,6 @@ table {
 </head>
 
 <body>
-@if(isset($is_print) && $is_print)
-<script>
-    window.onload = function() {
-        window.print();
-        setTimeout(function() {
-            window.close();
-        }, 500);
-    }
-</script>
-@endif
 <div class="header">
     @php
         $logoPath = storage_path('app/public/logo.png');
@@ -160,10 +187,33 @@ table {
             </h3>
 </div>
 
+<table class="order-meta-box">
+    <tr>
+        <td style="text-align: left;">
+            <span class="order-id-highlight">ORDER ID: {{ $order->order_number }}</span>
+        </td>
+        <td style="text-align: right; font-size: 12px; color: #333;">
+            <span class="bold">Invoice Date:</span> {{ now()->format('d-m-Y') }} &nbsp;|&nbsp;
+            @php
+                $pm = strtolower($order->payment_method ?? '');
+                $paymentLabel = match($pm) {
+                    'cod', 'cash on delivery' => 'COD',
+                    'razorpay' => 'Prepaid (Razorpay)',
+                    'card' => 'Prepaid (Card)',
+                    '1' => 'Prepaid',
+                    default => !empty($order->payment_method) ? Str::upper($order->payment_method) : 'N/A'
+                };
+            @endphp
+            <span class="bold">Payment:</span> {{ $paymentLabel }}
+            @if(!empty($order->courier_partner)) &nbsp;|&nbsp; <span class="bold">Courier:</span> {{ $order->courier_partner }}@endif
+            @if(!empty($order->tracking_id)) &nbsp;|&nbsp; <span class="bold">Tracking:</span> {{ $order->tracking_id }}@endif
+        </td>
+    </tr>
+</table>
+
 <table class="details-section">
     <tr>
-            <td class="deliver-to">
-            
+        <td class="deliver-to">
             <h4>Deliver to,</h4>
             <p style="margin:0;">
                 <span class="bold">Name:</span> {{ $order->first_name }} {{ $order->last_name }}<br>
@@ -191,30 +241,23 @@ table {
                     @if($vendor->pan_number)<span class="bold">PAN:</span> {{ $vendor->pan_number }}<br>@endif
                     <span class="bold" style="color: #666; font-size: 11px;">(Fulfilled via BookWindow Platform)</span>
                 @else
-                    <span class="bold">BOOKWINDOW</span><br>
-                    <span class="bold">Store:</span> Shop No. 9, 2nd floor, <br>
-                    Udita tower Radha Ballabh Marg,<br>
-                    Dada Gurudev Nagar, Sanganer, Jaipur, Rajasthan<br>
-                    <span class="bold">Code:</span> 302029<br>
-                    <span class="bold">Phone No:</span> +91 9468 888227<br>
-                    <span class="bold">E-mail ID:</span> info@bookwindow.in<br>
+                    @php
+                        $globalSetting = \App\Models\GlobalSetting::first();
+                        $storeName = $globalSetting?->site_name ?? 'BOOKWINDOW';
+                        $storeAddress = $globalSetting?->contact_address ?? "Shop No. 9, Udita tower, Radha Ballabh Marg, Dada Gurudev Nagar, Sanganer, Jaipur, Rajasthan 302029";
+                        $storePhone = $globalSetting?->contact_phone ?? '+91 77425 66356';
+                        $storeEmail = $globalSetting?->contact_email ?? 'info@bookwindow.in';
+                    @endphp
+                    <span class="bold">{{ $storeName }}</span><br>
+                    <span class="bold">Store:</span> {!! nl2br(e($storeAddress)) !!}<br>
+                    <span class="bold">Phone No:</span> {{ $storePhone }}<br>
+                    <span class="bold">E-mail ID:</span> {{ $storeEmail }}<br>
                     <span class="bold">Website:</span> www.bookwindow.in
                 @endif
             </p>
         </td>
     </tr>
 </table>
-
-<div class="order-info">
-    <p style="margin:0;">
-        Order Details,<br><br>
-        <span class="bold">Invoice Date:</span> {{ now()->format('d-m-Y') }}<br>
-        <span class="bold">Order ID:</span> {{ $order->order_number }}<br>
-        <span class="bold">Payment Method:</span> ₹ / {{ Str::upper($order->payment_method) }}
-        @if(!empty($order->courier_partner))<br><span class="bold">Courier Partner:</span> {{ $order->courier_partner }}@endif
-        @if(!empty($order->tracking_id))<br><span class="bold">Tracking ID:</span> {{ $order->tracking_id }}@endif
-    </p>
-</div>
 
 @php
     $displayItems = isset($items) ? $items : $order->items;

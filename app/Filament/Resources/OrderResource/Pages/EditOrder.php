@@ -10,6 +10,21 @@ class EditOrder extends EditRecord
 {
     protected static string $resource = OrderResource::class;
 
+    public function getHeading(): string
+    {
+        return 'Edit Order #' . ($this->record->order_number ?? $this->record->id);
+    }
+
+    public function getSubheading(): ?string
+    {
+        $name = trim(($this->record->first_name ?? '') . ' ' . ($this->record->last_name ?? ''));
+        $phone = $this->record->customer_phone ?? '';
+        $amount = format_currency($this->record->total_amount ?? 0, 2);
+
+        $parts = array_filter([$name, $phone ? "📞 {$phone}" : null, "Grand Total: {$amount}"]);
+        return implode('  •  ', $parts);
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -34,6 +49,13 @@ class EditOrder extends EditRecord
                 $data['cancelled_by'] = 'admin';
             }
         }
+
+        if (!empty($data['call_status']) && $data['call_status'] !== 'pending') {
+            if (empty($this->record->called_at)) {
+                $data['called_at'] = now();
+            }
+        }
+
         return $data;
     }
 }
